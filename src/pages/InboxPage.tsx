@@ -103,7 +103,7 @@ const InboxPage: React.FC = () => {
 
       {/* Chat Area */}
       {selectedConversation ? (
-        <div className={`${mobileView === 'chat' ? 'block' : 'hidden'} lg:block flex-1 relative`}>
+        <div className={`${mobileView === 'chat' ? 'block' : 'hidden'} lg:flex flex-1 relative`}>
           {/* Mobile Navigation Buttons in Chat */}
           <div className="lg:hidden absolute top-4 left-4 z-10 flex items-center space-x-2">
             <button
