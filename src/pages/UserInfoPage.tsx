@@ -6,6 +6,7 @@ import MainSidebar from '../components/MainSidebar'
 const UserInfoPage: React.FC = () => {
   const { user, clientData } = useAuth()
   const navigate = useNavigate()
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = React.useState(false)
 
   const handleChannelSelect = (channel: 'whatsapp' | 'instagram' | 'messenger' | null) => {
     if (channel) {
@@ -26,8 +27,28 @@ const UserInfoPage: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Main Sidebar */}
-      <MainSidebar onChannelSelect={handleChannelSelect} />
+      {/* Mobile Hamburger Button */}
+      <button
+        onClick={() => setIsMobileSidebarOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-primary-600 text-white rounded-md shadow-lg"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Main Sidebar - Hidden on mobile, overlay on tablet, fixed on desktop */}
+      <div className={`${isMobileSidebarOpen ? 'block' : 'hidden'} lg:block fixed lg:relative inset-0 lg:inset-auto z-40`}>
+        {isMobileSidebarOpen && (
+          <div
+            className="lg:hidden absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+        )}
+        <div className="relative">
+          <MainSidebar onChannelSelect={handleChannelSelect} />
+        </div>
+      </div>
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-8">

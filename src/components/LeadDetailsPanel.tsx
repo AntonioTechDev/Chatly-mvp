@@ -148,7 +148,7 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
       ></div>
 
       {/* Panel */}
-      <div className="fixed lg:relative right-0 top-0 h-full w-96 bg-white border-l border-gray-200 z-50 overflow-y-auto shadow-xl lg:shadow-none">
+      <div className="fixed lg:relative right-0 top-0 h-full w-full lg:w-96 bg-white border-l border-gray-200 z-50 overflow-y-auto shadow-xl lg:shadow-none">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10">
           <h3 className="font-semibold text-gray-900">Dettagli Lead</h3>

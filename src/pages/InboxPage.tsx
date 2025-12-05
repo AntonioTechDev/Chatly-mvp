@@ -53,15 +53,17 @@ const InboxPage: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Mobile Hamburger Button */}
-      <button
-        onClick={() => setIsMobileSidebarOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-primary-600 text-white rounded-md shadow-lg"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
+      {/* Mobile Hamburger Button - Show only when not in chat view */}
+      {mobileView !== 'chat' && (
+        <button
+          onClick={() => setIsMobileSidebarOpen(true)}
+          className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-primary-600 text-white rounded-md shadow-lg"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      )}
 
       {/* Main Sidebar - Hidden on mobile, overlay on tablet, fixed on desktop */}
       <div className={`${isMobileSidebarOpen ? 'block' : 'hidden'} lg:block fixed lg:relative inset-0 lg:inset-auto z-40`}>
@@ -102,14 +104,24 @@ const InboxPage: React.FC = () => {
       {/* Chat Area */}
       {selectedConversation ? (
         <div className={`${mobileView === 'chat' ? 'block' : 'hidden'} lg:block flex-1 relative`}>
-          {/* Mobile Back Button in Chat */}
-          <div className="lg:hidden absolute top-4 left-4 z-10">
+          {/* Mobile Navigation Buttons in Chat */}
+          <div className="lg:hidden absolute top-4 left-4 z-10 flex items-center space-x-2">
             <button
               onClick={handleBackToConversations}
-              className="p-2 bg-white rounded-full shadow-lg"
+              className="p-2 bg-primary-600 text-white rounded-full shadow-lg"
+              title="Torna alle conversazioni"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className="p-2 bg-white border border-gray-300 rounded-full shadow-lg"
+              title="Menu"
+            >
+              <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
           </div>

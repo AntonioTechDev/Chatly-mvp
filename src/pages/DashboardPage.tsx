@@ -14,6 +14,7 @@ const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444']
 const DashboardPage: React.FC = () => {
   const { user, clientData } = useAuth()
   const navigate = useNavigate()
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [stats, setStats] = useState({
     totalConversations: 0,
     totalMessages: 0,
@@ -179,21 +180,29 @@ const DashboardPage: React.FC = () => {
 
     const fetchStats = async () => {
       try {
-        // Fetch conversations
-        const { data: conversations, error: convError } = await supabase
+        // Fetch ONLY conversations count and data (without messages) - MUCH FASTER
+        const { data: conversations, error: convError, count: totalConversations } = await supabase
           .from('conversations')
-          .select('*, messages(*)')
+          .select('id, channel', { count: 'exact' })
           .eq('platform_client_id', clientData.id)
 
         if (convError) throw convError
 
-        // Fetch leads
-        const { data: leads, error: leadsError } = await supabase
+        // Count leads
+        const { count: totalLeads, error: leadsError } = await supabase
           .from('social_contacts')
-          .select('*')
+          .select('id', { count: 'exact', head: true })
           .eq('platform_client_id', clientData.id)
 
         if (leadsError) throw leadsError
+
+        // Count total messages - much faster than loading all
+        const { count: totalMessages, error: messagesError } = await supabase
+          .from('messages')
+          .select('id', { count: 'exact', head: true })
+          .in('conversation_id', conversations?.map(c => c.id) || [])
+
+        if (messagesError) throw messagesError
 
         // Process conversations by channel
         const channelCounts = conversations?.reduce((acc: any, conv) => {
@@ -206,32 +215,46 @@ const DashboardPage: React.FC = () => {
           value: value as number
         }))
 
-        // Process messages
-        const allMessages = conversations?.flatMap(conv => conv.messages || []) || []
+        // Fetch ONLY recent messages for sender type stats (last 100 instead of ALL)
+        const { data: recentMessagesForStats } = await supabase
+          .from('messages')
+          .select('sender_type')
+          .in('conversation_id', conversations?.map(c => c.id) || [])
+          .order('created_at', { ascending: false })
+          .limit(100)
 
         // Messages by sender type
-        const senderCounts = allMessages.reduce((acc: any, msg) => {
+        const senderCounts = recentMessagesForStats?.reduce((acc: any, msg) => {
           const type = msg.sender_type || 'unknown'
           acc[type] = (acc[type] || 0) + 1
           return acc
-        }, {})
+        }, {}) || {}
 
         const messagesBySender = Object.entries(senderCounts).map(([name, value]) => ({
           name: name === 'user' ? 'Cliente' : name === 'human_agent' ? 'Agente' : name === 'bot' ? 'Bot' : name === 'ai' ? 'AI Assistant' : 'Sistema',
           value: value as number
         }))
 
-        // Messages last 7 days
+        // Messages last 7 days - optimized with single query
         const last7Days = Array.from({ length: 7 }, (_, i) => {
           const date = new Date()
           date.setDate(date.getDate() - (6 - i))
           return date.toISOString().split('T')[0]
         })
 
+        // Fetch messages from last 7 days with a single query
+        const sevenDaysAgo = last7Days[0]
+        const { data: last7DaysMessages } = await supabase
+          .from('messages')
+          .select('created_at')
+          .in('conversation_id', conversations?.map(c => c.id) || [])
+          .gte('created_at', sevenDaysAgo)
+          .order('created_at', { ascending: true })
+
         const messagesLast7Days = last7Days.map(date => {
-          const count = allMessages.filter(msg =>
+          const count = last7DaysMessages?.filter(msg =>
             msg.created_at?.startsWith(date)
-          ).length
+          ).length || 0
           return {
             date: new Date(date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }),
             messages: count
@@ -239,9 +262,9 @@ const DashboardPage: React.FC = () => {
         })
 
         setStats({
-          totalConversations: conversations?.length || 0,
-          totalMessages: allMessages.length,
-          totalLeads: leads?.length || 0,
+          totalConversations: totalConversations || 0,
+          totalMessages: totalMessages || 0,
+          totalLeads: totalLeads || 0,
           conversationsByChannel,
           messagesBySender,
           messagesLast7Days
@@ -257,13 +280,24 @@ const DashboardPage: React.FC = () => {
 
     // Real-time messages subscription
     const fetchRecentMessages = async () => {
-      const { data } = await supabase
-        .from('messages')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20)
+      // Get messages only from conversations of this client
+      const { data: clientConversations } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('platform_client_id', clientData.id)
 
-      if (data) setRecentMessages(data)
+      const conversationIds = clientConversations?.map(c => c.id) || []
+
+      if (conversationIds.length > 0) {
+        const { data } = await supabase
+          .from('messages')
+          .select('*')
+          .in('conversation_id', conversationIds)
+          .order('created_at', { ascending: false })
+          .limit(20)
+
+        if (data) setRecentMessages(data)
+      }
     }
 
     fetchRecentMessages()
@@ -277,8 +311,19 @@ const DashboardPage: React.FC = () => {
           schema: 'public',
           table: 'messages',
         },
-        (payload) => {
-          setRecentMessages(prev => [payload.new as Message, ...prev].slice(0, 20))
+        async (payload) => {
+          const newMessage = payload.new as Message
+
+          // Verify message belongs to this client's conversations
+          const { data: conversation } = await supabase
+            .from('conversations')
+            .select('platform_client_id')
+            .eq('id', newMessage.conversation_id)
+            .single()
+
+          if (conversation?.platform_client_id === clientData.id) {
+            setRecentMessages(prev => [newMessage, ...prev].slice(0, 20))
+          }
         }
       )
       .subscribe()
@@ -290,8 +335,28 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Main Sidebar */}
-      <MainSidebar onChannelSelect={handleChannelSelect} />
+      {/* Mobile Hamburger Button */}
+      <button
+        onClick={() => setIsMobileSidebarOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-primary-600 text-white rounded-md shadow-lg"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Main Sidebar - Hidden on mobile, overlay on tablet, fixed on desktop */}
+      <div className={`${isMobileSidebarOpen ? 'block' : 'hidden'} lg:block fixed lg:relative inset-0 lg:inset-auto z-40`}>
+        {isMobileSidebarOpen && (
+          <div
+            className="lg:hidden absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+        )}
+        <div className="relative">
+          <MainSidebar onChannelSelect={handleChannelSelect} />
+        </div>
+      </div>
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-8">

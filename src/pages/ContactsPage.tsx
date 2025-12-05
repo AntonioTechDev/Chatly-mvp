@@ -12,6 +12,7 @@ type SortDirection = 'asc' | 'desc'
 const ContactsPage: React.FC = () => {
   const { clientData } = useAuth()
   const navigate = useNavigate()
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [contacts, setContacts] = useState<SocialContact[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
@@ -218,8 +219,28 @@ const ContactsPage: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Main Sidebar */}
-      <MainSidebar onChannelSelect={handleChannelSelect} />
+      {/* Mobile Hamburger Button */}
+      <button
+        onClick={() => setIsMobileSidebarOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-primary-600 text-white rounded-md shadow-lg"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+
+      {/* Main Sidebar - Hidden on mobile, overlay on tablet, fixed on desktop */}
+      <div className={`${isMobileSidebarOpen ? 'block' : 'hidden'} lg:block fixed lg:relative inset-0 lg:inset-auto z-40`}>
+        {isMobileSidebarOpen && (
+          <div
+            className="lg:hidden absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+        )}
+        <div className="relative">
+          <MainSidebar onChannelSelect={handleChannelSelect} />
+        </div>
+      </div>
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-8">
