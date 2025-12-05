@@ -1,6 +1,6 @@
 /**
  * Database Types - Auto-generated from Supabase
- * Last updated: 2025-12-05
+ * Last updated: 2025-12-05 (updated with user_id field)
  *
  * DO NOT EDIT THE TYPES BELOW MANUALLY
  * Run: supabase gen types typescript --local > src/types/database.types.ts

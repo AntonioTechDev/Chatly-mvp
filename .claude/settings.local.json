@@ -16,7 +16,9 @@
       "Bash(tree:*)",
       "Bash(findstr:*)",
       "Bash(dir /S /B \"C:\\Users\\AntonioDeBiase\\Desktop\\Progetti\\PERSONALI\\CHATLY MVP\\Chatly-mvp\\src\")",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "mcp__supabase__execute_sql",
+      "mcp__supabase__apply_migration"
     ]
   },
   "enableAllProjectMcpServers": true,
