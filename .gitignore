@@ -1,0 +1,5 @@
+# .gitignore
+.mcp.json
+.env
+.env.local
+node_modules
