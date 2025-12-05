@@ -33,45 +33,63 @@ const ChatArea: React.FC<ChatAreaProps> = ({ conversation, onToggleLeadDetails, 
       const loadingFn = loadMore ? setIsLoadingMore : setIsLoading
       loadingFn(true)
 
-      let query = supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversation.id)
-        .order('created_at', { ascending: true })
-
-      // Pagination: load more older messages
-      if (loadMore && messages.length > 0) {
-        query = query
-          .lt('created_at', messages[0].created_at)
-          .limit(MESSAGES_PER_PAGE)
+      // Use callback form to get current messages without depending on messages state
+      if (loadMore) {
+        setMessages((currentMessages) => {
+          // If we're loading more and have messages, fetch older ones
+          if (currentMessages.length > 0) {
+            const oldestMessage = currentMessages[0]
+            supabase
+              .from('messages')
+              .select('*')
+              .eq('conversation_id', conversation.id)
+              .lt('created_at', oldestMessage.created_at)
+              .order('created_at', { ascending: true })
+              .limit(MESSAGES_PER_PAGE)
+              .then(({ data, error }) => {
+                if (error) {
+                  console.error('Error fetching more messages:', error)
+                  toast.error('Errore caricamento messaggi')
+                } else {
+                  setMessages((prev) => [...(data || []), ...prev])
+                  setHasMore((data || []).length === MESSAGES_PER_PAGE)
+                }
+                setIsLoadingMore(false)
+              })
+          }
+          return currentMessages
+        })
       } else {
         // Initial load: get last 30 messages
-        query = query.limit(MESSAGES_PER_PAGE)
-      }
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('conversation_id', conversation.id)
+          .order('created_at', { ascending: true })
+          .limit(MESSAGES_PER_PAGE)
 
-      const { data, error } = await query
+        if (error) throw error
 
-      if (error) throw error
-
-      if (loadMore) {
-        setMessages((prev) => [...(data || []), ...prev])
-        setHasMore((data || []).length === MESSAGES_PER_PAGE)
-      } else {
         setMessages(data || [])
         setHasMore((data || []).length === MESSAGES_PER_PAGE)
         // Scroll to bottom on initial load
         setTimeout(scrollToBottom, 100)
+        setIsLoading(false)
       }
     } catch (error: any) {
       console.error('Error fetching messages:', error)
       toast.error('Errore caricamento messaggi')
-    } finally {
       setIsLoading(false)
       setIsLoadingMore(false)
     }
-  }, [conversation.id, messages])
+  }, [conversation.id])
 
   useEffect(() => {
+    // Reset state when conversation changes
+    setMessages([])
+    setIsLoading(true)
+    setHasMore(true)
+
     // Fetch initial messages
     fetchMessages()
 
@@ -87,8 +105,32 @@ const ChatArea: React.FC<ChatAreaProps> = ({ conversation, onToggleLeadDetails, 
           filter: `conversation_id=eq.${conversation.id}`,
         },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as Message])
+          const newMessage = payload.new as Message
+          setMessages((prev) => {
+            // Check if message already exists (to avoid duplicates)
+            if (prev.some(msg => msg.id === newMessage.id)) {
+              return prev
+            }
+            return [...prev, newMessage]
+          })
           setTimeout(scrollToBottom, 100)
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversation.id}`,
+        },
+        (payload) => {
+          const updatedMessage = payload.new as Message
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === updatedMessage.id ? updatedMessage : msg
+            )
+          )
         }
       )
       .subscribe()
@@ -96,9 +138,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({ conversation, onToggleLeadDetails, 
     return () => {
       if (channelRef.current) {
         channelRef.current.unsubscribe()
+        channelRef.current = null
       }
     }
-  }, [conversation.id])
+  }, [conversation.id, fetchMessages])
 
   // Filter messages client-side
   const filteredMessages = messages.filter((message) => {
@@ -335,7 +378,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({ conversation, onToggleLeadDetails, 
                     label: 'Cliente',
                     labelColor: 'text-blue-700'
                   }
-                case 'agent':
+                case 'human_agent':
                   return {
                     bg: 'bg-blue-600',
                     text: 'text-white',
@@ -351,7 +394,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({ conversation, onToggleLeadDetails, 
                     label: 'Bot',
                     labelColor: 'text-green-700'
                   }
-                case 'ai_assistant':
+                case 'ai':
                   return {
                     bg: 'bg-purple-600',
                     text: 'text-white',

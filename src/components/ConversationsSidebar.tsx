@@ -33,8 +33,7 @@ const ConversationsSidebar: React.FC<ConversationsSidebarProps> = ({
           .select(`
             *,
             social_contact:social_contacts(*),
-            platform_client:platform_clients(*),
-            messages(*)
+            platform_client:platform_clients(*)
           `)
           .eq('platform_client_id', clientData.id)
           .eq('channel', channel)
@@ -42,7 +41,24 @@ const ConversationsSidebar: React.FC<ConversationsSidebarProps> = ({
 
         if (error) throw error
 
-        setConversations(data as ConversationWithRelations[])
+        // Fetch last message for each conversation
+        const conversationsWithMessages = await Promise.all(
+          (data || []).map(async (conv) => {
+            const { data: messages } = await supabase
+              .from('messages')
+              .select('*')
+              .eq('conversation_id', conv.id)
+              .order('created_at', { ascending: false })
+              .limit(1)
+
+            return {
+              ...conv,
+              messages: messages || []
+            }
+          })
+        )
+
+        setConversations(conversationsWithMessages as ConversationWithRelations[])
       } catch (error: any) {
         console.error('Error fetching conversations:', error)
         toast.error('Errore caricamento conversazioni')
@@ -54,24 +70,86 @@ const ConversationsSidebar: React.FC<ConversationsSidebarProps> = ({
     fetchConversations()
 
     // Realtime subscription for new conversations
-    const subscription = supabase
+    const conversationsChannel = supabase
       .channel(`conversations:${channel}`)
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'conversations',
           filter: `channel=eq.${channel}`,
         },
-        () => {
-          fetchConversations()
+        async (payload) => {
+          // Fetch the full conversation with relations
+          const { data } = await supabase
+            .from('conversations')
+            .select(`
+              *,
+              social_contact:social_contacts(*),
+              platform_client:platform_clients(*)
+            `)
+            .eq('id', payload.new.id)
+            .single()
+
+          if (data) {
+            setConversations(prev => [{ ...data, messages: [] } as ConversationWithRelations, ...prev])
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversations',
+          filter: `channel=eq.${channel}`,
+        },
+        async (payload) => {
+          // Update the conversation in the list
+          setConversations(prev =>
+            prev.map(conv =>
+              conv.id === payload.new.id
+                ? { ...conv, ...payload.new }
+                : conv
+            )
+          )
+        }
+      )
+      .subscribe()
+
+    // Realtime subscription for new messages
+    const messagesChannel = supabase
+      .channel(`messages:${channel}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          const newMessage = payload.new
+          // Update the conversation's last message and move to top
+          setConversations(prev => {
+            const convIndex = prev.findIndex(c => c.id === newMessage.conversation_id)
+            if (convIndex === -1) return prev
+
+            const updatedConversations = [...prev]
+            const conversation = { ...updatedConversations[convIndex] }
+            conversation.messages = [newMessage]
+
+            // Remove from current position and add to top
+            updatedConversations.splice(convIndex, 1)
+            return [conversation, ...updatedConversations]
+          })
         }
       )
       .subscribe()
 
     return () => {
-      subscription.unsubscribe()
+      conversationsChannel.unsubscribe()
+      messagesChannel.unsubscribe()
     }
   }, [clientData?.id, channel])
 
@@ -190,7 +268,7 @@ const ConversationsSidebar: React.FC<ConversationsSidebarProps> = ({
   }
 
   return (
-    <div className="w-96 bg-white border-r border-gray-200 flex flex-col h-screen">
+    <div className="w-full lg:w-96 bg-white lg:border-r border-gray-200 flex flex-col h-screen">
       {/* Header */}
       <div className="p-4 border-b border-gray-200">
         <div className="flex items-center space-x-2 mb-4">

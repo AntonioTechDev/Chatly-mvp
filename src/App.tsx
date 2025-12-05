@@ -5,6 +5,8 @@ import ProtectedRoute from './components/ProtectedRoute'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import InboxPage from './pages/InboxPage'
+import UserInfoPage from './pages/UserInfoPage'
+import ContactsPage from './pages/ContactsPage'
 
 const RootRedirect = () => {
   const { isAuthenticated, isLoading } = useAuth()
@@ -62,6 +64,22 @@ function App() {
             element={
               <ProtectedRoute>
                 <InboxPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/user-info"
+            element={
+              <ProtectedRoute>
+                <UserInfoPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/contacts"
+            element={
+              <ProtectedRoute>
+                <ContactsPage />
               </ProtectedRoute>
             }
           />
