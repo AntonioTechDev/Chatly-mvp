@@ -23,20 +23,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchClientData = async (userId: string): Promise<PlatformClient | null> => {
     try {
-      const { data, error } = await supabase
+      console.log('📊 fetchClientData called with userId:', userId)
+
+      // Add timeout to prevent hanging
+      const timeoutPromise = new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error('Query timeout')), 10000)
+      )
+
+      const queryPromise = supabase
         .from('platform_clients')
         .select('*')
         .eq('user_id', userId)
-        .single()
+        .maybeSingle()
+
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any
+
+      console.log('📊 Query result - data:', data, 'error:', error)
 
       if (error) {
-        console.error('Error fetching client data:', error)
+        console.error('❌ Error fetching client data:', error)
         return null
       }
 
+      if (!data) {
+        console.error('❌ No client data found for user')
+        return null
+      }
+
+      console.log('✅ Client data retrieved:', data)
       return data
     } catch (error) {
-      console.error('Error in fetchClientData:', error)
+      console.error('❌ Exception in fetchClientData:', error)
       return null
     }
   }
@@ -50,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true)
+      console.log('🔐 Starting login...')
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -57,24 +75,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
 
       if (error) {
+        console.error('❌ Auth error:', error)
         throw error
       }
 
+      console.log('✅ Auth successful, user:', data.user?.id)
+
       if (data.user) {
+        console.log('🔍 Fetching client data for user:', data.user.id)
         const clientData = await fetchClientData(data.user.id)
+
         if (!clientData) {
+          console.error('❌ No platform client found')
           toast.error('Account non trovato. Contatta il supporto.')
           await supabase.auth.signOut()
           throw new Error('No platform client found for this user')
         }
 
+        console.log('✅ Client data fetched:', clientData)
         setUser(data.user)
         setSession(data.session)
         setClientData(clientData)
         toast.success('Login effettuato con successo!')
+        console.log('✅ Login completed successfully')
       }
     } catch (error: any) {
-      console.error('Login error:', error)
+      console.error('❌ Login error:', error)
       const message = error.message || 'Errore durante il login'
       toast.error(message)
       throw error

@@ -1,14 +1,16 @@
 import React from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import MainSidebar from '../components/MainSidebar'
 
 const DashboardPage: React.FC = () => {
-  const { user, clientData, logout } = useAuth()
+  const { user, clientData } = useAuth()
   const navigate = useNavigate()
 
-  const handleLogout = async () => {
-    await logout()
-    navigate('/login')
+  const handleChannelSelect = (channel: 'whatsapp' | 'instagram' | 'messenger' | null) => {
+    if (channel) {
+      navigate('/inbox', { state: { selectedChannel: channel } })
+    }
   }
 
   const formatDate = (dateString: string | null | undefined) => {
@@ -23,29 +25,12 @@ const DashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold text-gray-900">Chatly</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-600">
-              Benvenuto, <span className="font-medium">{user?.email}</span>
-            </span>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="flex h-screen bg-gray-50">
+      {/* Main Sidebar */}
+      <MainSidebar onChannelSelect={handleChannelSelect} />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 overflow-y-auto px-8 py-8">
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-900">Dashboard</h2>
           <p className="mt-2 text-gray-600">
