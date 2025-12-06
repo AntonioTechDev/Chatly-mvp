@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import type { ConversationWithRelations } from '../types/database.types'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
+import { escapeRegex } from '../lib/security-utils'
 
 interface ConversationsSidebarProps {
   channel: 'whatsapp' | 'instagram' | 'messenger'
@@ -217,7 +218,9 @@ const ConversationsSidebar: React.FC<ConversationsSidebarProps> = ({
   const highlightText = (text: string, query: string) => {
     if (!query || !text) return text
 
-    const parts = text.split(new RegExp(`(${query})`, 'gi'))
+    // Escape regex special characters to prevent ReDoS
+    const escapedQuery = escapeRegex(query)
+    const parts = text.split(new RegExp(`(${escapedQuery})`, 'gi'))
     return (
       <>
         {parts.map((part, index) =>

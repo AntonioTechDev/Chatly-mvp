@@ -23,7 +23,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchClientData = async (userId: string): Promise<PlatformClient | null> => {
     try {
-      console.log('📊 fetchClientData called with userId:', userId)
+      if (import.meta.env.DEV) {
+        console.log('📊 fetchClientData called')
+      }
 
       // Add timeout to prevent hanging
       const timeoutPromise = new Promise<null>((_, reject) =>
@@ -38,22 +40,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any
 
-      console.log('📊 Query result - data:', data, 'error:', error)
-
       if (error) {
-        console.error('❌ Error fetching client data:', error)
+        if (import.meta.env.DEV) {
+          console.error('❌ Error fetching client data:', error)
+        }
         return null
       }
 
       if (!data) {
-        console.error('❌ No client data found for user')
+        if (import.meta.env.DEV) {
+          console.error('❌ No client data found for user')
+        }
         return null
       }
 
-      console.log('✅ Client data retrieved:', data)
+      if (import.meta.env.DEV) {
+        console.log('✅ Client data retrieved')
+      }
       return data
     } catch (error) {
-      console.error('❌ Exception in fetchClientData:', error)
+      if (import.meta.env.DEV) {
+        console.error('❌ Exception in fetchClientData:', error)
+      }
       return null
     }
   }
@@ -67,7 +75,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true)
-      console.log('🔐 Starting login...')
+      if (import.meta.env.DEV) {
+        console.log('🔐 Starting login...')
+      }
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -75,32 +85,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       })
 
       if (error) {
-        console.error('❌ Auth error:', error)
+        if (import.meta.env.DEV) {
+          console.error('❌ Auth error:', error)
+        }
         throw error
       }
 
-      console.log('✅ Auth successful, user:', data.user?.id)
+      if (import.meta.env.DEV) {
+        console.log('✅ Auth successful')
+      }
 
       if (data.user) {
-        console.log('🔍 Fetching client data for user:', data.user.id)
+        if (import.meta.env.DEV) {
+          console.log('🔍 Fetching client data...')
+        }
         const clientData = await fetchClientData(data.user.id)
 
         if (!clientData) {
-          console.error('❌ No platform client found')
+          if (import.meta.env.DEV) {
+            console.error('❌ No platform client found')
+          }
           toast.error('Account non trovato. Contatta il supporto.')
           await supabase.auth.signOut()
           throw new Error('No platform client found for this user')
         }
 
-        console.log('✅ Client data fetched:', clientData)
+        if (import.meta.env.DEV) {
+          console.log('✅ Client data fetched')
+        }
         setUser(data.user)
         setSession(data.session)
         setClientData(clientData)
         toast.success('Login effettuato con successo!')
-        console.log('✅ Login completed successfully')
+        if (import.meta.env.DEV) {
+          console.log('✅ Login completed successfully')
+        }
       }
     } catch (error: any) {
-      console.error('❌ Login error:', error)
+      if (import.meta.env.DEV) {
+        console.error('❌ Login error:', error)
+      }
       const message = error.message || 'Errore durante il login'
       toast.error(message)
       throw error
@@ -155,7 +179,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event)
+        if (import.meta.env.DEV) {
+          console.log('Auth state changed:', event)
+        }
 
         if (session?.user) {
           setUser(session.user)

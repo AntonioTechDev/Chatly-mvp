@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Message, ConversationWithRelations } from '../types/database.types'
 import toast from 'react-hot-toast'
+import { escapeRegex } from '../lib/security-utils'
 
 interface ChatAreaProps {
   conversation: ConversationWithRelations
@@ -181,7 +182,9 @@ const ChatArea: React.FC<ChatAreaProps> = ({ conversation, onToggleLeadDetails, 
   const highlightText = (text: string, query: string) => {
     if (!query || !text) return text
 
-    const parts = text.split(new RegExp(`(${query})`, 'gi'))
+    // Escape regex special characters to prevent ReDoS
+    const escapedQuery = escapeRegex(query)
+    const parts = text.split(new RegExp(`(${escapedQuery})`, 'gi'))
     return (
       <>
         {parts.map((part, index) =>
