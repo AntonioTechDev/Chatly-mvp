@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import type { User, Session } from '@supabase/supabase-js'
 import type { AuthContextType } from '../types/auth.types'
@@ -20,25 +20,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null)
   const [clientData, setClientData] = useState<PlatformClient | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isFetchingClient, setIsFetchingClient] = useState(false)
+  const clientDataRef = useRef<PlatformClient | null>(null)
+  const isInitializingRef = useRef(true)
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    clientDataRef.current = clientData
+  }, [clientData])
 
   const fetchClientData = async (userId: string): Promise<PlatformClient | null> => {
+    // Prevent duplicate fetches
+    if (isFetchingClient) {
+      if (import.meta.env.DEV) {
+        console.log('⏸️ fetchClientData already in progress, skipping...')
+      }
+      return null
+    }
+
+    setIsFetchingClient(true)
+
     try {
       if (import.meta.env.DEV) {
         console.log('📊 fetchClientData called')
       }
 
-      // Add timeout to prevent hanging
-      const timeoutPromise = new Promise<null>((_, reject) =>
-        setTimeout(() => reject(new Error('Query timeout')), 10000)
-      )
-
-      const queryPromise = supabase
+      const { data, error } = await supabase
         .from('platform_clients')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle()
-
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any
 
       if (error) {
         if (import.meta.env.DEV) {
@@ -63,6 +74,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('❌ Exception in fetchClientData:', error)
       }
       return null
+    } finally {
+      setIsFetchingClient(false)
     }
   }
 
@@ -156,21 +169,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   useEffect(() => {
+    let mounted = true
+
     // Check for existing session on mount
     const initializeAuth = async () => {
       try {
+        isInitializingRef.current = true
+
+        if (import.meta.env.DEV) {
+          console.log('🔄 Initializing auth...')
+        }
+
         const { data: { session } } = await supabase.auth.getSession()
 
+        if (!mounted) return
+
         if (session?.user) {
+          if (import.meta.env.DEV) {
+            console.log('✅ Session found, fetching client data...')
+          }
           setUser(session.user)
           setSession(session)
           const clientData = await fetchClientData(session.user.id)
-          setClientData(clientData)
+          if (mounted) {
+            setClientData(clientData)
+          }
+        } else {
+          if (import.meta.env.DEV) {
+            console.log('ℹ️ No session found')
+          }
         }
       } catch (error) {
-        console.error('Error initializing auth:', error)
+        console.error('❌ Error initializing auth:', error)
       } finally {
-        setIsLoading(false)
+        if (mounted) {
+          setIsLoading(false)
+          isInitializingRef.current = false
+          if (import.meta.env.DEV) {
+            console.log('✅ Initialization complete')
+          }
+        }
       }
     }
 
@@ -179,26 +217,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (import.meta.env.DEV) {
-          console.log('Auth state changed:', event)
+        // CRITICAL: Ignore all events during initialization
+        // This prevents race conditions where onAuthStateChange fires
+        // before initializeAuth completes, causing premature isLoading=false
+        if (isInitializingRef.current) {
+          if (import.meta.env.DEV) {
+            console.log('⏸️ Ignoring auth event during initialization:', event)
+          }
+          return
         }
 
-        if (session?.user) {
+        if (!mounted) return
+
+        if (import.meta.env.DEV) {
+          console.log('🔔 Auth state changed:', event)
+        }
+
+        // Only handle explicit sign in/out events, not initial session
+        if (event === 'SIGNED_IN' && session?.user) {
           setUser(session.user)
           setSession(session)
-          const clientData = await fetchClientData(session.user.id)
-          setClientData(clientData)
-        } else {
+
+          // Only fetch client data if we don't already have it
+          const currentClientData = clientDataRef.current
+          if (!currentClientData || currentClientData.user_id !== session.user.id) {
+            const newClientData = await fetchClientData(session.user.id)
+            if (mounted) {
+              setClientData(newClientData)
+            }
+          }
+        } else if (event === 'SIGNED_OUT') {
           setUser(null)
           setSession(null)
           setClientData(null)
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          // Just update session, keep existing user and client data
+          setSession(session)
         }
 
-        setIsLoading(false)
+        // Note: We don't set isLoading here anymore
+        // Only initializeAuth controls isLoading during startup
       }
     )
 
     return () => {
+      mounted = false
       subscription.unsubscribe()
     }
   }, [])

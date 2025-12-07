@@ -1,6 +1,6 @@
 /**
  * Database Types - Auto-generated from Supabase
- * Last updated: 2025-12-05 (updated with user_id field)
+ * Last updated: 2025-12-06 (updated with secure token storage)
  *
  * DO NOT EDIT THE TYPES BELOW MANUALLY
  * Run: supabase gen types typescript --local > src/types/database.types.ts
@@ -122,6 +122,7 @@ export type Database = {
           id: number
           metadata: Json | null
           platform_client_id: number | null
+          user_document_id: number | null
         }
         Insert: {
           content?: string | null
@@ -129,6 +130,7 @@ export type Database = {
           id?: number
           metadata?: Json | null
           platform_client_id?: number | null
+          user_document_id?: number | null
         }
         Update: {
           content?: string | null
@@ -136,8 +138,16 @@ export type Database = {
           id?: number
           metadata?: Json | null
           platform_client_id?: number | null
+          user_document_id?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "documents_user_document_id_fkey"
+            columns: ["user_document_id"]
+            isOneToOne: false
+            referencedRelation: "user_documents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fk_documents_platform_client"
             columns: ["platform_client_id"]
@@ -325,16 +335,17 @@ export type Database = {
           email: string
           id: number
           instagram_account_id: string | null
-          instagram_token: string | null
+          instagram_token_secret_id: string | null
           messenger_page_id: string | null
-          messenger_token: string | null
+          messenger_token_secret_id: string | null
           phone: string | null
           plan_id: number | null
           status: string | null
           subscription_plan: string | null
           updated_at: string | null
+          user_id: string | null
           whatsapp_phone_id: string | null
-          whatsapp_token: string | null
+          whatsapp_token_secret_id: string | null
         }
         Insert: {
           business_name: string
@@ -342,16 +353,17 @@ export type Database = {
           email: string
           id?: number
           instagram_account_id?: string | null
-          instagram_token?: string | null
+          instagram_token_secret_id?: string | null
           messenger_page_id?: string | null
-          messenger_token?: string | null
+          messenger_token_secret_id?: string | null
           phone?: string | null
           plan_id?: number | null
           status?: string | null
           subscription_plan?: string | null
           updated_at?: string | null
+          user_id?: string | null
           whatsapp_phone_id?: string | null
-          whatsapp_token?: string | null
+          whatsapp_token_secret_id?: string | null
         }
         Update: {
           business_name?: string
@@ -359,16 +371,17 @@ export type Database = {
           email?: string
           id?: number
           instagram_account_id?: string | null
-          instagram_token?: string | null
+          instagram_token_secret_id?: string | null
           messenger_page_id?: string | null
-          messenger_token?: string | null
+          messenger_token_secret_id?: string | null
           phone?: string | null
           plan_id?: number | null
           status?: string | null
           subscription_plan?: string | null
           updated_at?: string | null
+          user_id?: string | null
           whatsapp_phone_id?: string | null
-          whatsapp_token?: string | null
+          whatsapp_token_secret_id?: string | null
         }
         Relationships: [
           {
@@ -494,11 +507,77 @@ export type Database = {
           },
         ]
       }
+      user_documents: {
+        Row: {
+          category: string | null
+          description: string | null
+          drive_file_id: string | null
+          drive_web_view_link: string | null
+          file_name: string
+          file_size: number
+          id: number
+          mime_type: string
+          platform_client_id: number
+          search_vector: unknown
+          storage_path: string
+          tags: string[] | null
+          updated_at: string
+          uploaded_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          description?: string | null
+          drive_file_id?: string | null
+          drive_web_view_link?: string | null
+          file_name: string
+          file_size: number
+          id?: number
+          mime_type: string
+          platform_client_id: number
+          search_vector?: unknown
+          storage_path: string
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          description?: string | null
+          drive_file_id?: string | null
+          drive_web_view_link?: string | null
+          file_name?: string
+          file_size?: number
+          id?: number
+          mime_type?: string
+          platform_client_id?: number
+          search_vector?: unknown
+          storage_path?: string
+          tags?: string[] | null
+          updated_at?: string
+          uploaded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_documents_platform_client_id_fkey"
+            columns: ["platform_client_id"]
+            isOneToOne: false
+            referencedRelation: "platform_clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      delete_platform_token: {
+        Args: { p_platform_client_id: number; p_token_type: string }
+        Returns: boolean
+      }
       get_client_by_recipient: {
         Args: { recipient_key: string }
         Returns: {
@@ -518,6 +597,14 @@ export type Database = {
           message_id: string
           role: string
         }[]
+      }
+      get_document_storage_url: {
+        Args: { p_storage_path: string }
+        Returns: string
+      }
+      get_platform_token: {
+        Args: { p_platform_client_id: number; p_token_type: string }
+        Returns: string
       }
       lookup_client_by_messenger: {
         Args: { p_messenger_page_id: string }
@@ -546,6 +633,22 @@ export type Database = {
           metadata: Json
           similarity: number
         }[]
+      }
+      store_platform_token: {
+        Args: {
+          p_platform_client_id: number
+          p_token_type: string
+          p_token_value: string
+        }
+        Returns: string
+      }
+      update_platform_token: {
+        Args: {
+          p_new_token_value: string
+          p_platform_client_id: number
+          p_token_type: string
+        }
+        Returns: string
       }
       upsert_user: {
         Args: {
@@ -689,109 +792,15 @@ export const Constants = {
   },
 } as const
 
-// ============================================================================
-// CUSTOM APPLICATION TYPES (Safe to edit below this line)
-// ============================================================================
-
-// Table type shortcuts
-export type PlatformClient = Tables<"platform_clients">
-export type SocialContact = Tables<"social_contacts">
-export type Conversation = Tables<"conversations">
-export type Message = Tables<"messages">
-export type Appointment = Tables<"appointments">
-export type Document = Tables<"documents">
-export type Plan = Tables<"plans">
-export type MessageType = Tables<"message_types">
-export type MessageDirection = Tables<"message_directions">
-export type SenderType = Tables<"sender_types">
-
-// Insert types
-export type PlatformClientInsert = TablesInsert<"platform_clients">
-export type SocialContactInsert = TablesInsert<"social_contacts">
-export type ConversationInsert = TablesInsert<"conversations">
-export type MessageInsert = TablesInsert<"messages">
-export type AppointmentInsert = TablesInsert<"appointments">
-
-// Update types
-export type PlatformClientUpdate = TablesUpdate<"platform_clients">
-export type SocialContactUpdate = TablesUpdate<"social_contacts">
-export type ConversationUpdate = TablesUpdate<"conversations">
-export type MessageUpdate = TablesUpdate<"messages">
-export type AppointmentUpdate = TablesUpdate<"appointments">
+// Helper types for common queries
+export type PlatformClient = Tables<'platform_clients'>
+export type SocialContact = Tables<'social_contacts'>
+export type Message = Tables<'messages'>
+export type Conversation = Tables<'conversations'>
+export type Appointment = Tables<'appointments'>
+export type UserDocument = Tables<'user_documents'>
 
 // Extended types with relations
-export type MessageWithRelations = Message & {
-  social_contact?: SocialContact
-  conversation?: Conversation
-}
-
-export type ConversationWithRelations = Conversation & {
-  social_contact?: SocialContact
-  platform_client?: PlatformClient
-  messages?: Message[]
-}
-
-export type SocialContactWithRelations = SocialContact & {
-  platform_client?: PlatformClient
-  messages?: Message[]
-  conversations?: Conversation[]
-  appointments?: Appointment[]
-}
-
-export type AppointmentWithRelations = Appointment & {
-  social_contact?: SocialContact
-  platform_client?: PlatformClient
-}
-
-// Media content type
-export type MediaContent = {
-  url: string
-  type: 'image' | 'video' | 'audio' | 'document'
-  mime_type?: string
-  filename?: string
-  size?: number
-  thumbnail_url?: string
-}
-
-// Profile data type
-export type ProfileData = {
-  avatar_url?: string
-  language?: string
-  timezone?: string
-  preferences?: Record<string, unknown>
-  custom_fields?: Record<string, unknown>
-}
-
-// Goal type
-export type Goal = {
-  id: string
-  description: string
-  status: 'pending' | 'in_progress' | 'completed'
-  created_at: string
-}
-
-// Plan features type
-export type PlanFeatures = {
-  multi_channel?: boolean
-  ai_assistant?: boolean
-  analytics?: boolean
-  api_access?: boolean
-  custom_branding?: boolean
-  priority_support?: boolean
-  webhooks?: boolean
-}
-
-// Database function response types
-export type DocumentMatch = {
-  content: string
-  id: number
-  metadata: Json
-  similarity: number
-}
-
-export type ConversationHistoryMessage = {
-  content: string
-  created_at: string
-  message_id: string
-  role: string
+export interface ConversationWithRelations extends Conversation {
+  social_contact: SocialContact
 }
