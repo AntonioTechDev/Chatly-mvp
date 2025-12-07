@@ -7,6 +7,7 @@ import DashboardPage from './pages/DashboardPage'
 import InboxPage from './pages/InboxPage'
 import UserInfoPage from './pages/UserInfoPage'
 import ContactsPage from './pages/ContactsPage'
+import DocumentsPage from './pages/DocumentsPage'
 
 const RootRedirect = () => {
   const { isAuthenticated, isLoading } = useAuth()
@@ -80,6 +81,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <ContactsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/documents"
+            element={
+              <ProtectedRoute>
+                <DocumentsPage />
               </ProtectedRoute>
             }
           />
