@@ -316,7 +316,7 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
                 <span className="text-sm font-bold text-primary-600 min-w-[3rem] text-right">{lead.data_completeness || 0}%</span>
               </div>
               <p className="text-xs text-gray-500">
-                {lead.data_completeness >= 80 ? '✓ Profilo completo' : '⚠ Informazioni mancanti'}
+                {(lead.data_completeness || 0) >= 80 ? '✓ Profilo completo' : '⚠ Informazioni mancanti'}
               </p>
             </div>
           </div>
