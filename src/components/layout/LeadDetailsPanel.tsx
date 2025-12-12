@@ -1,5 +1,5 @@
 import React from 'react'
-import type { SocialContact } from '../types/database.types'
+import type { SocialContact } from '../../types/database.types'
 
 interface LeadDetailsPanelProps {
   lead: SocialContact

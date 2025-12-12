@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import MainSidebar from '../components/MainSidebar'
-import ConversationsSidebar from '../components/ConversationsSidebar'
-import ChatArea from '../components/ChatArea'
-import LeadDetailsPanel from '../components/LeadDetailsPanel'
+import MainSidebar from '../components/layout/MainSidebar'
+import ConversationsSidebar from '../components/chat/ConversationsSidebar'
+import ChatArea from '../components/chat/ChatArea'
+import LeadDetailsPanel from '../components/layout/LeadDetailsPanel'
 import type { ConversationWithRelations } from '../types/database.types'
 
 const InboxPage: React.FC = () => {

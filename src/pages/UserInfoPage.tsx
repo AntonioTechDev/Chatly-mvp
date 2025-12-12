@@ -1,7 +1,7 @@
 import React from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import MainSidebar from '../components/MainSidebar'
+import MainSidebar from '../components/layout/MainSidebar'
 
 const UserInfoPage: React.FC = () => {
   const { user, clientData } = useAuth()

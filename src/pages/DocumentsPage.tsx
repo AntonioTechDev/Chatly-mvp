@@ -13,11 +13,16 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import MainSidebar from '../components/MainSidebar'
-import DocumentUpload from '../components/DocumentUpload'
-import DocumentCard from '../components/DocumentCard'
-import DocumentViewer from '../components/DocumentViewer'
+import MainSidebar from '../components/layout/MainSidebar'
+import DocumentUpload from '../components/documents/DocumentUpload'
+import DocumentViewer from '../components/documents/DocumentViewer'
 import { useDocuments } from '../hooks/useDocuments'
+import { SearchBar } from '../components/ui/SearchBar/SearchBar'
+import { FilterButtons, type FilterOption } from '../components/ui/FilterButtons/FilterButtons'
+import { Pagination } from '../components/ui/Pagination/Pagination'
+import { PageSizeSelector } from '../components/ui/PageSizeSelector/PageSizeSelector'
+import { ViewModeToggle } from '../components/ui/ViewModeToggle/ViewModeToggle'
+import { DocumentsList } from '../components/documents/DocumentsList/DocumentsList'
 
 const DocumentsPage: React.FC = () => {
   const { clientData } = useAuth()
@@ -27,9 +32,9 @@ const DocumentsPage: React.FC = () => {
   const [selectedFilter, setSelectedFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
   const [selectedDocument, setSelectedDocument] = useState<any>(null)
   const [selectedDocuments, setSelectedDocuments] = useState<Set<number>>(new Set())
-  const itemsPerPage = 12
 
   const {
     documents,
@@ -37,6 +42,7 @@ const DocumentsPage: React.FC = () => {
     error,
     uploadDocument,
     deleteDocument,
+    downloadDocument,
     refreshDocuments
   } = useDocuments()
 
@@ -77,16 +83,21 @@ const DocumentsPage: React.FC = () => {
 
   // Pagination
   const paginatedDocuments = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage
-    return filteredDocuments.slice(startIndex, startIndex + itemsPerPage)
-  }, [filteredDocuments, currentPage])
+    const startIndex = (currentPage - 1) * pageSize
+    return filteredDocuments.slice(startIndex, startIndex + pageSize)
+  }, [filteredDocuments, currentPage, pageSize])
 
-  const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage)
+  const totalPages = Math.ceil(filteredDocuments.length / pageSize)
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when filters or page size change
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, selectedFilter])
+  }, [searchQuery, selectedFilter, pageSize])
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [currentPage])
 
   // Handle channel select - Navigate to inbox with selected channel
   const handleChannelSelect = useCallback((channel: 'whatsapp' | 'instagram' | 'messenger' | null) => {
@@ -106,13 +117,13 @@ const DocumentsPage: React.FC = () => {
   }, [])
 
   // Handle document selection
-  const handleSelectDocument = useCallback((id: number, selected: boolean) => {
+  const handleSelectDocument = useCallback((document: any) => {
     setSelectedDocuments(prev => {
       const newSet = new Set(prev)
-      if (selected) {
-        newSet.add(id)
+      if (newSet.has(document.id)) {
+        newSet.delete(document.id)
       } else {
-        newSet.delete(id)
+        newSet.add(document.id)
       }
       return newSet
     })
@@ -174,7 +185,7 @@ const DocumentsPage: React.FC = () => {
   }, [selectedDocuments, documents])
 
   // Dynamic filters based on actual document types
-  const availableFilters = useMemo(() => {
+  const filterOptions = useMemo<FilterOption[]>(() => {
     const filterCounts: { [key: string]: { label: string; count: number } } = {
       all: { label: 'Tutti', count: documents.length }
     }
@@ -196,7 +207,12 @@ const DocumentsPage: React.FC = () => {
       filterCounts[type].count++
     })
 
-    return filterCounts
+    // Convert to array of FilterOption
+    return Object.entries(filterCounts).map(([value, { label, count }]) => ({
+      value,
+      label,
+      count
+    }))
   }, [documents, getDocumentType])
 
   // Stats
@@ -319,114 +335,89 @@ const DocumentsPage: React.FC = () => {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 {/* Search */}
                 <div className="flex-1">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Cerca documenti..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    />
-                    <svg
-                      className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </div>
+                  <SearchBar
+                    value={searchQuery}
+                    onChange={setSearchQuery}
+                    placeholder="Cerca documenti..."
+                  />
                 </div>
 
                 {/* View Mode Toggle */}
-                <div className="flex items-center space-x-2 border border-gray-300 rounded-md shrink-0">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 ${viewMode === 'grid' ? 'bg-gray-100' : ''}`}
-                    title="Griglia"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 ${viewMode === 'list' ? 'bg-gray-100' : ''}`}
-                    title="Lista"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                    </svg>
-                  </button>
-                </div>
+                <ViewModeToggle
+                  value={viewMode}
+                  onChange={setViewMode}
+                />
               </div>
 
               {/* Filter Buttons - Dynamic based on uploaded documents */}
-              <div className="flex items-center flex-wrap gap-2">
-                {Object.entries(availableFilters).map(([value, { label, count }]) => (
-                  <button
-                    key={value}
-                    onClick={() => setSelectedFilter(value)}
-                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${
-                      selectedFilter === value
-                        ? 'bg-primary-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {label} {value !== 'all' && `(${count})`}
-                  </button>
-                ))}
-              </div>
+              <FilterButtons
+                options={filterOptions}
+                selected={selectedFilter}
+                onSelect={setSelectedFilter}
+              />
             </div>
           </div>
 
-          {/* Bulk Actions Bar */}
+          {/* Bulk Actions Bar and Page Size Selector */}
           {filteredDocuments.length > 0 && (
             <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                {/* Select All */}
-                <div className="flex items-center space-x-3">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedDocuments.size === filteredDocuments.length && filteredDocuments.length > 0}
-                      onChange={handleSelectAll}
-                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                    />
-                    <span className="text-sm font-medium text-gray-700">
-                      Seleziona tutti {filteredDocuments.length > 0 && `(${filteredDocuments.length})`}
-                    </span>
-                  </label>
+              <div className="flex flex-col gap-4">
+                {/* Bulk Actions Row */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  {/* Select All */}
+                  <div className="flex items-center space-x-3">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedDocuments.size === filteredDocuments.length && filteredDocuments.length > 0}
+                        onChange={handleSelectAll}
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">
+                        Seleziona tutti {filteredDocuments.length > 0 && `(${filteredDocuments.length})`}
+                      </span>
+                    </label>
+                    {selectedDocuments.size > 0 && (
+                      <span className="text-sm text-gray-500">
+                        {selectedDocuments.size} selezionati
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Bulk Actions */}
                   {selectedDocuments.size > 0 && (
-                    <span className="text-sm text-gray-500">
-                      {selectedDocuments.size} selezionati
-                    </span>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={handleDownloadMultiple}
+                        className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        <span className="text-sm font-medium">Scarica</span>
+                      </button>
+                      <button
+                        onClick={handleDeleteMultiple}
+                        className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span className="text-sm font-medium">Elimina</span>
+                      </button>
+                    </div>
                   )}
                 </div>
 
-                {/* Bulk Actions */}
-                {selectedDocuments.size > 0 && (
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={handleDownloadMultiple}
-                      className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                      </svg>
-                      <span className="text-sm font-medium">Scarica</span>
-                    </button>
-                    <button
-                      onClick={handleDeleteMultiple}
-                      className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      <span className="text-sm font-medium">Elimina</span>
-                    </button>
-                  </div>
-                )}
+                {/* Page Size Selector Row */}
+                <div className="flex justify-end border-t border-gray-200 pt-4">
+                  <PageSizeSelector
+                    value={pageSize}
+                    options={[5, 10, 20, 50]}
+                    onChange={setPageSize}
+                    totalItems={filteredDocuments.length}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -454,43 +445,30 @@ const DocumentsPage: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className={
-                viewMode === 'grid'
-                  ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'
-                  : 'space-y-3'
-              }>
-                {paginatedDocuments.map(doc => (
-                  <DocumentCard
-                    key={doc.id}
-                    document={doc}
-                    onDelete={deleteDocument}
-                    onView={handleViewDocument}
-                    isSelected={selectedDocuments.has(doc.id)}
-                    onSelect={handleSelectDocument}
-                  />
-                ))}
-              </div>
+              <DocumentsList
+                documents={paginatedDocuments}
+                onViewDocument={handleViewDocument}
+                onDownloadDocument={downloadDocument}
+                onDeleteDocument={deleteDocument}
+                enableSelection={true}
+                selectedIds={Array.from(selectedDocuments)}
+                onSelectionChange={handleSelectDocument}
+                viewMode={viewMode}
+                emptyMessage={
+                  searchQuery || selectedFilter !== 'all'
+                    ? 'Nessun documento trovato con i filtri applicati'
+                    : 'Nessun documento caricato. Carica il tuo primo documento!'
+                }
+              />
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
-                  <button
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                    className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-                  >
-                    Precedente
-                  </button>
-                  <span className="text-sm text-gray-600 whitespace-nowrap">
-                    Pagina {currentPage} di {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                    className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
-                  >
-                    Successiva
-                  </button>
+                <div className="flex justify-center mt-6">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
                 </div>
               )}
             </>

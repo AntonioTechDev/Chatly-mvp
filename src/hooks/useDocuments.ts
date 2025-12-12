@@ -37,6 +37,7 @@ interface UseDocumentsReturn {
   error: Error | null
   uploadDocument: (file: File, metadata?: any) => Promise<UserDocument | null>
   deleteDocument: (id: number, storagePath?: string) => Promise<boolean>
+  downloadDocument: (storagePath: string, fileName: string) => Promise<void>
   refreshDocuments: () => Promise<void>
   searchDocuments: (query: string) => Promise<UserDocument[]>
 }
@@ -204,6 +205,34 @@ export function useDocuments(): UseDocumentsReturn {
     await fetchDocuments()
   }, [fetchDocuments])
 
+  // Download document from storage
+  const downloadDocument = useCallback(async (
+    storagePath: string,
+    fileName: string
+  ) => {
+    try {
+      // Download from storage
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .download(storagePath)
+
+      if (error) throw error
+
+      // Create download link
+      const url = URL.createObjectURL(data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Download error:', error)
+      toast.error('Errore durante il download')
+    }
+  }, [])
+
   // Search documents
   const searchDocuments = useCallback(async (query: string): Promise<UserDocument[]> => {
     if (!query.trim() || !clientData?.id || !user?.id) return documents
@@ -302,6 +331,7 @@ export function useDocuments(): UseDocumentsReturn {
     error,
     uploadDocument,
     deleteDocument,
+    downloadDocument,
     refreshDocuments,
     searchDocuments
   }

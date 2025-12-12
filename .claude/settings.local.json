@@ -19,7 +19,17 @@
       "Bash(npm run dev:*)",
       "mcp__supabase__execute_sql",
       "mcp__supabase__apply_migration",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git checkout:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm run build)",
+      "Bash(node fix-css.js:*)",
+      "Bash(move fix-css.js fix-css.cjs)",
+      "Bash(node fix-css.cjs:*)",
+      "Bash(dir /B \"C:\\Users\\AntonioDeBiase\\Desktop\\Progetti\\PERSONALI\\CHATLY MVP\\Chatly-mvp\\src\\components\")",
+      "Bash(find:*)",
+      "Bash(cat:*)",
+      "Bash(ls:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

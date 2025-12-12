@@ -1,0 +1,73 @@
+/* Button Component Styles - CSS Nested */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+
+  /* Sizes */
+  &.sm {
+    padding: 0.5rem;
+    font-size: 0.875rem;
+  }
+
+  &.md {
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  &.lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  /* Variants */
+  &.primary {
+    background-color: #3b82f6;
+    color: white;
+
+    &:hover:not(.disabled) {
+      background-color: #2563eb;
+    }
+  }
+
+  &.secondary {
+    background-color: #f3f4f6;
+    color: #374151;
+
+    &:hover:not(.disabled) {
+      background-color: #e5e7eb;
+    }
+  }
+
+  &.danger {
+    background-color: transparent;
+    color: #ef4444;
+
+    &:hover:not(.disabled) {
+      background-color: #fee2e2;
+      color: #dc2626;
+    }
+  }
+
+  &.ghost {
+    background-color: transparent;
+    color: #6b7280;
+
+    &:hover:not(.disabled) {
+      background-color: #f3f4f6;
+      color: #3b82f6;
+    }
+  }
+
+  /* Disabled State */
+  &.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

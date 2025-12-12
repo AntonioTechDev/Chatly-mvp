@@ -1,0 +1,99 @@
+/* Pagination Component Styles - CSS Nested */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+
+  & .button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background-color: white;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover:not(:disabled) {
+      background-color: #f9fafb;
+      border-color: #9ca3af;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &.prev,
+    &.next {
+      width: 2.5rem;
+    }
+  }
+
+  & .icon {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  & .numbers {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  & .number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background-color: white;
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background-color: #f9fafb;
+      border-color: #9ca3af;
+    }
+
+    &.active {
+      background-color: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+
+      &:hover {
+        background-color: #2563eb;
+        border-color: #2563eb;
+      }
+    }
+  }
+
+  & .ellipsis {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: #6b7280;
+    font-weight: 500;
+  }
+
+  & .info {
+    margin-left: 0.5rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+    white-space: nowrap;
+  }
+}

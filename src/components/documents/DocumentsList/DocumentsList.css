@@ -1,0 +1,19 @@
+.documents-list {
+  &.empty {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 3rem;
+
+    .message {
+      color: #6b7280;
+      font-size: 0.875rem;
+    }
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
+  }
+}
