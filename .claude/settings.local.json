@@ -29,7 +29,10 @@
       "Bash(dir /B \"C:\\Users\\AntonioDeBiase\\Desktop\\Progetti\\PERSONALI\\CHATLY MVP\\Chatly-mvp\\src\\components\")",
       "Bash(find:*)",
       "Bash(cat:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)",
+      "Bash(git push:*)"
     ]
   },
   "enableAllProjectMcpServers": true,
