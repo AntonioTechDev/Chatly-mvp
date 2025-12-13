@@ -20,16 +20,74 @@ export interface ContactFilters {
  * Returns only master contacts (those without master_contact_id)
  */
 export const getContacts = async (filters: ContactFilters): Promise<SocialContact[]> => {
+  // If channel filter is applied, we need to find master contacts that have
+  // the selected channel either as their main platform OR in their linked contacts
+  if (filters.channels && filters.channels.length > 0) {
+    // Step 1: Get all contacts (master + linked) that match the channel filter
+    let channelQuery = supabase
+      .from('social_contacts')
+      .select('id, master_contact_id, platform')
+      .eq('platform_client_id', filters.platformClientId)
+      .in('platform', filters.channels)
+
+    const { data: matchingContacts, error: channelError } = await channelQuery
+
+    if (channelError) throw channelError
+
+    // Step 2: Extract master contact IDs
+    const masterContactIds = new Set<number>()
+
+    for (const contact of matchingContacts || []) {
+      if (contact.master_contact_id === null) {
+        // This is a master contact with matching platform
+        masterContactIds.add(contact.id)
+      } else {
+        // This is a linked contact with matching platform
+        // Add its master to the set
+        masterContactIds.add(contact.master_contact_id)
+      }
+    }
+
+    if (masterContactIds.size === 0) {
+      return []
+    }
+
+    // Step 3: Fetch full master contact data
+    let query = supabase
+      .from('social_contacts')
+      .select('*')
+      .eq('platform_client_id', filters.platformClientId)
+      .in('id', Array.from(masterContactIds))
+
+    // Apply date range filter
+    if (filters.startDate) {
+      const start = new Date(filters.startDate)
+      start.setHours(0, 0, 0, 0)
+      query = query.gte('first_contact', start.toISOString())
+    }
+
+    if (filters.endDate) {
+      const end = new Date(filters.endDate)
+      end.setHours(23, 59, 59, 999)
+      query = query.lte('first_contact', end.toISOString())
+    }
+
+    // Default order
+    query = query.order('last_interaction', { ascending: false })
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    return data || []
+  }
+
+  // No channel filter - standard query
   let query = supabase
     .from('social_contacts')
     .select('*')
     .eq('platform_client_id', filters.platformClientId)
     .is('master_contact_id', null) // Only fetch master contacts
-
-  // Apply channel filter
-  if (filters.channels && filters.channels.length > 0) {
-    query = query.in('platform', filters.channels)
-  }
 
   // Apply date range filter
   if (filters.startDate) {

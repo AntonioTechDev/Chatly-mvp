@@ -44,6 +44,9 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
       await linkContacts(lead.id, targetContactId)
       await loadLinkedContacts()
       setIsLinkModalOpen(false)
+
+      // Notify parent to refetch contacts (a contact may have become slave)
+      onUpdate(lead)
     } catch (err) {
       console.error('Error linking contact:', err)
       setError(err instanceof Error ? err.message : 'Errore durante il collegamento')
@@ -59,6 +62,14 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
       setError(null)
       await unlinkContact(contactId)
       await loadLinkedContacts()
+
+      // Notify parent that a contact was unlinked (now becomes a new master)
+      // Trigger refetch to show the unlinked contact as a new master in the table
+      const unlinkedContact = linkedContacts.find(c => c.id === contactId)
+      if (unlinkedContact) {
+        // The unlinked contact is now a master, notify parent to refetch
+        onUpdate(lead) // Trigger refetch with current lead
+      }
     } catch (err) {
       console.error('Error unlinking contact:', err)
       setError(err instanceof Error ? err.message : 'Errore durante lo scollegamento')
