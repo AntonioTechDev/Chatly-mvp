@@ -448,8 +448,8 @@ const DocumentsPage: React.FC = () => {
               <DocumentsList
                 documents={paginatedDocuments}
                 onViewDocument={handleViewDocument}
-                onDownloadDocument={downloadDocument}
-                onDeleteDocument={deleteDocument}
+                onDownloadDocument={(doc) => downloadDocument(doc.id, doc.storage_path)}
+                onDeleteDocument={(doc) => deleteDocument(doc.id, doc.storage_path)}
                 enableSelection={true}
                 selectedIds={Array.from(selectedDocuments)}
                 onSelectionChange={handleSelectDocument}
