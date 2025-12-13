@@ -12,6 +12,7 @@ interface DocumentsListProps {
   onSelectionChange?: (document: Document) => void
   emptyMessage?: string
   enableSelection?: boolean
+  viewMode?: 'grid' | 'list'
 }
 
 export const DocumentsList: React.FC<DocumentsListProps> = ({
@@ -23,6 +24,7 @@ export const DocumentsList: React.FC<DocumentsListProps> = ({
   onSelectionChange,
   emptyMessage = 'Nessun documento trovato',
   enableSelection = false,
+  viewMode = 'grid',
 }) => {
   if (documents.length === 0) {
     return (
@@ -33,8 +35,8 @@ export const DocumentsList: React.FC<DocumentsListProps> = ({
   }
 
   return (
-    <div className="documents-list">
-      <div className="grid">
+    <div className={`documents-list ${viewMode}`}>
+      <div className={viewMode === 'grid' ? 'grid' : 'list'}>
         {documents.map((document) => (
           <DocumentCard
             key={document.id}

@@ -107,7 +107,12 @@ export const MessagesList: React.FC<MessagesListProps> = ({
             )}
             <MessageCard
               message={message}
-              isOutgoing={message.direction === 'outgoing'}
+              isOutgoing={
+                message.sender_type === 'ai' ||
+                message.sender_type === 'bot' ||
+                message.sender_type === 'human_agent' ||
+                message.sender_type === 'system'
+              }
             />
           </React.Fragment>
         )

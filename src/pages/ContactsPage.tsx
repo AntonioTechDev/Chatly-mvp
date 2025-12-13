@@ -16,12 +16,16 @@ import { FilterButtons } from '../components/ui/FilterButtons/FilterButtons'
 import { Pagination } from '../components/ui/Pagination/Pagination'
 import { PageSizeSelector } from '../components/ui/PageSizeSelector/PageSizeSelector'
 import { ContactsList } from '../components/contacts/ContactsList/ContactsList'
+import LeadDetailsPanel from '../components/layout/LeadDetailsPanel'
 import { useContacts } from '../hooks/useContacts'
 import type { SortField } from '../hooks/useContacts'
+import type { SocialContact } from '../types/database.types'
 
 const ContactsPage: React.FC = () => {
   const navigate = useNavigate()
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const [selectedContact, setSelectedContact] = useState<SocialContact | null>(null)
+  const [isLeadDetailsPanelOpen, setIsLeadDetailsPanelOpen] = useState(false)
 
   // Get all data and actions from hook
   const {
@@ -50,6 +54,15 @@ const ContactsPage: React.FC = () => {
     if (channel) {
       navigate('/inbox', { state: { selectedChannel: channel } })
     }
+  }
+
+  const handleContactClick = (contact: SocialContact) => {
+    setSelectedContact(contact)
+    setIsLeadDetailsPanelOpen(true)
+  }
+
+  const handleCloseLeadDetails = () => {
+    setIsLeadDetailsPanelOpen(false)
   }
 
   // Channel filter options
@@ -243,7 +256,11 @@ const ContactsPage: React.FC = () => {
           </div>
         ) : (
           <>
-            <ContactsList contacts={contacts} viewMode="grid" />
+            <ContactsList
+              contacts={contacts}
+              viewMode="table"
+              onContactClick={handleContactClick}
+            />
 
             {/* Pagination */}
             {totalPages > 1 && (
@@ -258,6 +275,15 @@ const ContactsPage: React.FC = () => {
           </>
         )}
       </main>
+
+      {/* Lead Details Panel */}
+      {selectedContact && (
+        <LeadDetailsPanel
+          contact={selectedContact}
+          isOpen={isLeadDetailsPanelOpen}
+          onClose={handleCloseLeadDetails}
+        />
+      )}
     </div>
   )
 }
