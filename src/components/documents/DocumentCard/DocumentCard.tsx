@@ -55,11 +55,11 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
             <span>{formatSize(document.file_size)}</span>
             <span>{formatDate(document.uploaded_at)}</span>
           </div>
+          <div className="actions">
+          {onView && <button onClick={(e) => { e.stopPropagation(); onView(document); }}>View</button>}
+          {onDownload && <button onClick={(e) => { e.stopPropagation(); onDownload(document); }}>Download</button>}
+          {onDelete && <button onClick={(e) => { e.stopPropagation(); onDelete(document); }}>Delete</button>}
         </div>
-        <div className="actions">
-          {onView && <button onClick={() => onView(document)}>View</button>}
-          {onDownload && <button onClick={() => onDownload(document)}>Download</button>}
-          {onDelete && <button onClick={() => onDelete(document)}>Delete</button>}
         </div>
       </div>
     </Card>
