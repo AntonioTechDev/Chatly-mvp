@@ -53,6 +53,26 @@ export const getContacts = async (filters: ContactFilters): Promise<SocialContac
 }
 
 /**
+ * Update contact fields
+ */
+export const updateContact = async (
+  contactId: number,
+  updates: Partial<SocialContact>
+): Promise<SocialContact> => {
+  const { data, error } = await supabase
+    .from('social_contacts')
+    .update(updates)
+    .eq('id', contactId)
+    .select()
+    .single()
+
+  if (error) throw error
+  if (!data) throw new Error('Failed to update contact')
+
+  return data
+}
+
+/**
  * Subscribe to realtime contact changes
  */
 export const subscribeToContacts = (

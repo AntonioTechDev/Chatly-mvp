@@ -65,6 +65,12 @@ const ContactsPage: React.FC = () => {
     setIsLeadDetailsPanelOpen(false)
   }
 
+  const handleLeadUpdate = (updatedLead: SocialContact) => {
+    // Update selected contact
+    setSelectedContact(updatedLead)
+    // The contacts list will be updated automatically through realtime subscription
+  }
+
   // Channel filter options
   const channelOptions = [
     { value: 'whatsapp', label: 'WhatsApp' },
@@ -282,6 +288,7 @@ const ContactsPage: React.FC = () => {
           lead={selectedContact}
           isOpen={isLeadDetailsPanelOpen}
           onClose={handleCloseLeadDetails}
+          onUpdate={handleLeadUpdate}
         />
       )}
     </div>

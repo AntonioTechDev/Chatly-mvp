@@ -1,13 +1,20 @@
-import React from 'react'
+import React, { useState } from 'react'
 import type { SocialContact } from '../../types/database.types'
+import { updateContact } from '../../services/contactService'
 
 interface LeadDetailsPanelProps {
   lead: SocialContact
   isOpen: boolean
   onClose: () => void
+  onUpdate?: (updatedLead: SocialContact) => void
 }
 
-const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClose }) => {
+const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClose, onUpdate }) => {
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [editedLead, setEditedLead] = useState<Partial<SocialContact>>(lead)
+  const [error, setError] = useState<string | null>(null)
+
   if (!isOpen) return null
 
   const formatDate = (dateString: string | null | undefined) => {
@@ -28,6 +35,56 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
       case 'new':
       default:
         return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const handleEdit = () => {
+    setEditedLead(lead)
+    setIsEditing(true)
+    setError(null)
+  }
+
+  const handleCancel = () => {
+    setEditedLead(lead)
+    setIsEditing(false)
+    setError(null)
+  }
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true)
+      setError(null)
+
+      // Validate required fields
+      if (!editedLead.display_name?.trim() && !editedLead.name?.trim()) {
+        throw new Error('Il nome o il display name è richiesto')
+      }
+
+      const updatedLead = await updateContact(lead.id, editedLead)
+
+      setIsEditing(false)
+      if (onUpdate) {
+        onUpdate(updatedLead)
+      }
+    } catch (err) {
+      console.error('Error updating lead:', err)
+      setError(err instanceof Error ? err.message : 'Errore durante il salvataggio')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleFieldChange = (field: keyof SocialContact, value: any) => {
+    setEditedLead((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleJsonFieldChange = (field: keyof SocialContact, value: string) => {
+    try {
+      const parsed = JSON.parse(value)
+      setEditedLead((prev) => ({ ...prev, [field]: parsed }))
+    } catch (err) {
+      // Keep the raw string for now, user might still be typing
+      setEditedLead((prev) => ({ ...prev, [field]: value }))
     }
   }
 
@@ -139,6 +196,8 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
     )
   }
 
+  const currentLead = isEditing ? editedLead : lead
+
   return (
     <>
       {/* Overlay */}
@@ -152,15 +211,62 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
         {/* Header */}
         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10">
           <h3 className="font-semibold text-gray-900">Dettagli Lead</h3>
-          <button
-            onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 rounded-md transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            {!isEditing ? (
+              <button
+                onClick={handleEdit}
+                className="p-1.5 text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-md transition-colors"
+                title="Modifica"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={handleCancel}
+                  disabled={isSaving}
+                  className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md transition-colors disabled:opacity-50"
+                >
+                  Annulla
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="px-3 py-1.5 text-sm bg-primary-600 text-white hover:bg-primary-700 rounded-md transition-colors disabled:opacity-50 flex items-center gap-1"
+                >
+                  {isSaving ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Salvataggio...
+                    </>
+                  ) : (
+                    'Salva'
+                  )}
+                </button>
+              </>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1 text-gray-400 hover:text-gray-600 rounded-md transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mx-4 mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
 
         {/* Content */}
         <div className="p-4 space-y-6">
@@ -168,17 +274,47 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
           <div className="bg-gradient-to-br from-primary-50 to-primary-100 rounded-lg p-6 text-center">
             <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto shadow-md">
               <span className="text-4xl text-primary-700 font-bold">
-                {(lead.display_name || lead.name || 'U').charAt(0).toUpperCase()}
+                {((currentLead as SocialContact).display_name || (currentLead as SocialContact).name || 'U').charAt(0).toUpperCase()}
               </span>
             </div>
-            <h4 className="mt-4 text-lg font-bold text-gray-900">
-              {lead.display_name || lead.name || 'Nome non disponibile'}
-            </h4>
-            <p className="text-sm text-gray-600 capitalize mt-1">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-200 text-primary-800">
-                {lead.platform}
-              </span>
-            </p>
+            {isEditing ? (
+              <div className="mt-4 space-y-2">
+                <input
+                  type="text"
+                  value={editedLead.display_name || ''}
+                  onChange={(e) => handleFieldChange('display_name', e.target.value)}
+                  placeholder="Display Name"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={editedLead.name || ''}
+                    onChange={(e) => handleFieldChange('name', e.target.value)}
+                    placeholder="Nome"
+                    className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  <input
+                    type="text"
+                    value={editedLead.surname || ''}
+                    onChange={(e) => handleFieldChange('surname', e.target.value)}
+                    placeholder="Cognome"
+                    className="px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+              </div>
+            ) : (
+              <>
+                <h4 className="mt-4 text-lg font-bold text-gray-900">
+                  {currentLead.display_name || currentLead.name || 'Nome non disponibile'}
+                </h4>
+                <p className="text-sm text-gray-600 capitalize mt-1">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-200 text-primary-800">
+                    {currentLead.platform}
+                  </span>
+                </p>
+              </>
+            )}
           </div>
 
           {/* Contact Info */}
@@ -189,32 +325,79 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
               </svg>
               Informazioni di Contatto
             </h5>
-            <dl className="space-y-3">
-              {lead.email && (
-                <div className="flex items-start">
-                  <dt className="text-xs font-medium text-gray-500 w-20 pt-0.5">Email:</dt>
-                  <dd className="text-sm text-gray-900 flex-1 break-all">{lead.email}</dd>
+            {isEditing ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Email:</label>
+                  <input
+                    type="email"
+                    value={editedLead.email || ''}
+                    onChange={(e) => handleFieldChange('email', e.target.value)}
+                    placeholder="email@example.com"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
                 </div>
-              )}
-              {lead.phone && (
-                <div className="flex items-start">
-                  <dt className="text-xs font-medium text-gray-500 w-20 pt-0.5">Telefono:</dt>
-                  <dd className="text-sm text-gray-900 flex-1">{lead.phone}</dd>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Telefono:</label>
+                  <input
+                    type="tel"
+                    value={editedLead.phone || ''}
+                    onChange={(e) => handleFieldChange('phone', e.target.value)}
+                    placeholder="+39 123 456 7890"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
                 </div>
-              )}
-              {lead.company && (
-                <div className="flex items-start">
-                  <dt className="text-xs font-medium text-gray-500 w-20 pt-0.5">Azienda:</dt>
-                  <dd className="text-sm text-gray-900 flex-1">{lead.company}</dd>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Azienda:</label>
+                  <input
+                    type="text"
+                    value={editedLead.company || ''}
+                    onChange={(e) => handleFieldChange('company', e.target.value)}
+                    placeholder="Nome Azienda"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
                 </div>
-              )}
-              {lead.age && (
-                <div className="flex items-start">
-                  <dt className="text-xs font-medium text-gray-500 w-20 pt-0.5">Età:</dt>
-                  <dd className="text-sm text-gray-900 flex-1">{lead.age} anni</dd>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Età:</label>
+                  <input
+                    type="number"
+                    value={editedLead.age || ''}
+                    onChange={(e) => handleFieldChange('age', e.target.value ? parseInt(e.target.value) : null)}
+                    placeholder="Età"
+                    min="0"
+                    max="150"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
                 </div>
-              )}
-            </dl>
+              </div>
+            ) : (
+              <dl className="space-y-3">
+                {currentLead.email && (
+                  <div className="flex items-start">
+                    <dt className="text-xs font-medium text-gray-500 w-20 pt-0.5">Email:</dt>
+                    <dd className="text-sm text-gray-900 flex-1 break-all">{currentLead.email}</dd>
+                  </div>
+                )}
+                {currentLead.phone && (
+                  <div className="flex items-start">
+                    <dt className="text-xs font-medium text-gray-500 w-20 pt-0.5">Telefono:</dt>
+                    <dd className="text-sm text-gray-900 flex-1">{currentLead.phone}</dd>
+                  </div>
+                )}
+                {currentLead.company && (
+                  <div className="flex items-start">
+                    <dt className="text-xs font-medium text-gray-500 w-20 pt-0.5">Azienda:</dt>
+                    <dd className="text-sm text-gray-900 flex-1">{currentLead.company}</dd>
+                  </div>
+                )}
+                {currentLead.age && (
+                  <div className="flex items-start">
+                    <dt className="text-xs font-medium text-gray-500 w-20 pt-0.5">Età:</dt>
+                    <dd className="text-sm text-gray-900 flex-1">{currentLead.age} anni</dd>
+                  </div>
+                )}
+              </dl>
+            )}
           </div>
 
           {/* Qualification Status */}
@@ -225,77 +408,158 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
               </svg>
               Qualificazione
             </h5>
-            <div className="flex items-center justify-between">
-              <span
-                className={`inline-flex px-3 py-1.5 text-sm font-semibold rounded-full ${getQualificationColor(
-                  lead.qualification_status
-                )}`}
-              >
-                {lead.qualification_status || 'new'}
-              </span>
-              {lead.lead_score !== null && (
-                <div className="text-right">
-                  <p className="text-xs text-gray-500">Lead Score</p>
-                  <p className="text-lg font-bold text-primary-600">{lead.lead_score}<span className="text-sm text-gray-500">/100</span></p>
+            {isEditing ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Status:</label>
+                  <select
+                    value={editedLead.qualification_status || 'new'}
+                    onChange={(e) => handleFieldChange('qualification_status', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="new">New</option>
+                    <option value="qualified">Qualified</option>
+                    <option value="unqualified">Unqualified</option>
+                  </select>
                 </div>
-              )}
-            </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Lead Score (0-100):</label>
+                  <input
+                    type="number"
+                    value={editedLead.lead_score || ''}
+                    onChange={(e) => handleFieldChange('lead_score', e.target.value ? parseInt(e.target.value) : null)}
+                    placeholder="Lead Score"
+                    min="0"
+                    max="100"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <span
+                  className={`inline-flex px-3 py-1.5 text-sm font-semibold rounded-full ${getQualificationColor(
+                    currentLead.qualification_status
+                  )}`}
+                >
+                  {currentLead.qualification_status || 'new'}
+                </span>
+                {currentLead.lead_score !== null && (
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">Lead Score</p>
+                    <p className="text-lg font-bold text-primary-600">{currentLead.lead_score}<span className="text-sm text-gray-500">/100</span></p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Goal/Intent */}
-          {lead.goal && (
-            <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-500">
-              <h5 className="text-sm font-bold text-gray-900 mb-2 flex items-center">
-                <svg className="w-4 h-4 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Obiettivo
-              </h5>
-              <div className="bg-white rounded-md p-3 mt-2 border border-purple-200">
-                {formatGoal(lead.goal)}
+          <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-500">
+            <h5 className="text-sm font-bold text-gray-900 mb-2 flex items-center">
+              <svg className="w-4 h-4 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Obiettivo
+            </h5>
+            {isEditing ? (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Goal (JSON Array):</label>
+                <textarea
+                  value={typeof editedLead.goal === 'string' ? editedLead.goal : JSON.stringify(editedLead.goal, null, 2)}
+                  onChange={(e) => handleJsonFieldChange('goal', e.target.value)}
+                  placeholder='["obiettivo 1", "obiettivo 2"]'
+                  rows={4}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+                />
+                <p className="text-xs text-gray-500 mt-1">Formato: JSON Array</p>
               </div>
-            </div>
-          )}
+            ) : (
+              currentLead.goal && (
+                <div className="bg-white rounded-md p-3 mt-2 border border-purple-200">
+                  {formatGoal(currentLead.goal)}
+                </div>
+              )
+            )}
+          </div>
 
           {/* Volume/Metrics */}
-          {(lead.volume || lead.plan_suggested) && (
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h5 className="text-sm font-bold text-gray-900 mb-3 flex items-center">
-                <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Metriche Business
-              </h5>
-              <dl className="space-y-2">
-                {lead.volume && (
-                  <div className="flex justify-between items-center bg-white rounded px-3 py-2">
-                    <dt className="text-xs font-medium text-gray-600">Volume:</dt>
-                    <dd className="text-sm font-semibold text-gray-900">{lead.volume}</dd>
-                  </div>
-                )}
-                {lead.plan_suggested && (
-                  <div className="flex justify-between items-center bg-white rounded px-3 py-2">
-                    <dt className="text-xs font-medium text-gray-600">Piano Suggerito:</dt>
-                    <dd className="text-sm font-semibold text-blue-700">{lead.plan_suggested}</dd>
-                  </div>
-                )}
-              </dl>
-            </div>
-          )}
+          <div className="bg-blue-50 rounded-lg p-4">
+            <h5 className="text-sm font-bold text-gray-900 mb-3 flex items-center">
+              <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              Metriche Business
+            </h5>
+            {isEditing ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Volume:</label>
+                  <input
+                    type="number"
+                    value={editedLead.volume || ''}
+                    onChange={(e) => handleFieldChange('volume', e.target.value ? parseInt(e.target.value) : null)}
+                    placeholder="Volume"
+                    min="0"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Piano Suggerito:</label>
+                  <input
+                    type="text"
+                    value={editedLead.plan_suggested || ''}
+                    onChange={(e) => handleFieldChange('plan_suggested', e.target.value)}
+                    placeholder="Piano Suggerito"
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+              </div>
+            ) : (
+              (currentLead.volume || currentLead.plan_suggested) && (
+                <dl className="space-y-2">
+                  {currentLead.volume && (
+                    <div className="flex justify-between items-center bg-white rounded px-3 py-2">
+                      <dt className="text-xs font-medium text-gray-600">Volume:</dt>
+                      <dd className="text-sm font-semibold text-gray-900">{currentLead.volume}</dd>
+                    </div>
+                  )}
+                  {currentLead.plan_suggested && (
+                    <div className="flex justify-between items-center bg-white rounded px-3 py-2">
+                      <dt className="text-xs font-medium text-gray-600">Piano Suggerito:</dt>
+                      <dd className="text-sm font-semibold text-blue-700">{currentLead.plan_suggested}</dd>
+                    </div>
+                  )}
+                </dl>
+              )
+            )}
+          </div>
 
           {/* Lead Source */}
-          {lead.lead_source && (
-            <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
-              <h5 className="text-sm font-bold text-gray-900 mb-2 flex items-center">
-                <svg className="w-4 h-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Fonte Lead
-              </h5>
-              <p className="text-sm font-medium text-gray-900 bg-white rounded px-3 py-2 mt-2">{lead.lead_source}</p>
-            </div>
-          )}
+          <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
+            <h5 className="text-sm font-bold text-gray-900 mb-2 flex items-center">
+              <svg className="w-4 h-4 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Fonte Lead
+            </h5>
+            {isEditing ? (
+              <div>
+                <input
+                  type="text"
+                  value={editedLead.lead_source || ''}
+                  onChange={(e) => handleFieldChange('lead_source', e.target.value)}
+                  placeholder="Fonte Lead"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+            ) : (
+              currentLead.lead_source && (
+                <p className="text-sm font-medium text-gray-900 bg-white rounded px-3 py-2 mt-2">{currentLead.lead_source}</p>
+              )
+            )}
+          </div>
 
           {/* Data Completeness */}
           <div className="bg-gray-50 rounded-lg p-4">
@@ -310,13 +574,13 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
                 <div className="flex-1 bg-gray-200 rounded-full h-3">
                   <div
                     className="bg-gradient-to-r from-primary-500 to-primary-600 h-3 rounded-full transition-all shadow-sm"
-                    style={{ width: `${lead.data_completeness || 0}%` }}
+                    style={{ width: `${currentLead.data_completeness || 0}%` }}
                   ></div>
                 </div>
-                <span className="text-sm font-bold text-primary-600 min-w-[3rem] text-right">{lead.data_completeness || 0}%</span>
+                <span className="text-sm font-bold text-primary-600 min-w-[3rem] text-right">{currentLead.data_completeness || 0}%</span>
               </div>
               <p className="text-xs text-gray-500">
-                {(lead.data_completeness || 0) >= 80 ? '✓ Profilo completo' : '⚠ Informazioni mancanti'}
+                {(currentLead.data_completeness || 0) >= 80 ? '✓ Profilo completo' : '⚠ Informazioni mancanti'}
               </p>
             </div>
           </div>
@@ -332,29 +596,43 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
             <dl className="space-y-2">
               <div className="flex items-start bg-white rounded px-3 py-2">
                 <dt className="text-xs font-medium text-gray-500 w-28 pt-0.5">Primo Contatto:</dt>
-                <dd className="text-sm text-gray-900 flex-1">{formatDate(lead.first_contact)}</dd>
+                <dd className="text-sm text-gray-900 flex-1">{formatDate(currentLead.first_contact)}</dd>
               </div>
               <div className="flex items-start bg-white rounded px-3 py-2">
                 <dt className="text-xs font-medium text-gray-500 w-28 pt-0.5">Ultima Interazione:</dt>
-                <dd className="text-sm text-gray-900 flex-1">{formatDate(lead.last_interaction)}</dd>
+                <dd className="text-sm text-gray-900 flex-1">{formatDate(currentLead.last_interaction)}</dd>
               </div>
             </dl>
           </div>
 
           {/* Profile Data (Additional JSON) */}
-          {lead.profile_data && Object.keys(lead.profile_data as object).length > 0 && (
-            <div className="bg-indigo-50 rounded-lg p-4 border-l-4 border-indigo-500">
-              <h5 className="text-sm font-bold text-gray-900 mb-2 flex items-center">
-                <svg className="w-4 h-4 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Dati Profilo
-              </h5>
-              <div className="mt-2">
-                {formatProfileData(lead.profile_data)}
+          <div className="bg-indigo-50 rounded-lg p-4 border-l-4 border-indigo-500">
+            <h5 className="text-sm font-bold text-gray-900 mb-2 flex items-center">
+              <svg className="w-4 h-4 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Dati Profilo
+            </h5>
+            {isEditing ? (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Profile Data (JSON Object):</label>
+                <textarea
+                  value={typeof editedLead.profile_data === 'string' ? editedLead.profile_data : JSON.stringify(editedLead.profile_data, null, 2)}
+                  onChange={(e) => handleJsonFieldChange('profile_data', e.target.value)}
+                  placeholder='{"chiave": "valore"}'
+                  rows={6}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
+                />
+                <p className="text-xs text-gray-500 mt-1">Formato: JSON Object</p>
               </div>
-            </div>
-          )}
+            ) : (
+              currentLead.profile_data && Object.keys(currentLead.profile_data as object).length > 0 && (
+                <div className="mt-2">
+                  {formatProfileData(currentLead.profile_data)}
+                </div>
+              )
+            )}
+          </div>
         </div>
       </div>
     </>
