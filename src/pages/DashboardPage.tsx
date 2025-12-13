@@ -406,12 +406,93 @@ const DashboardPage: React.FC = () => {
           if (conversation?.platform_client_id === clientData.id) {
             setRecentMessages(prev => [newMessage, ...prev].slice(0, 20))
 
-            // Real-time stats update: increment total messages
-            setStats(prevStats => ({
-              ...prevStats,
-              totalMessages: prevStats.totalMessages + 1
-            }))
+            // Real-time stats update
+            setStats(prevStats => {
+              // Update total messages
+              const newTotalMessages = prevStats.totalMessages + 1
+
+              // Update messages chart - add to today's count
+              const today = new Date().toISOString().split('T')[0]
+              const todayFormatted = new Date(today).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })
+
+              const updatedMessagesChart = prevStats.messagesLast7Days.map(day => {
+                if (day.date === todayFormatted) {
+                  return { ...day, messages: day.messages + 1 }
+                }
+                return day
+              })
+
+              // Update messages by sender type
+              const senderType = newMessage.sender_type || 'unknown'
+              const senderLabel = senderType === 'user' ? 'Cliente' :
+                                 senderType === 'human_agent' ? 'Agente' :
+                                 senderType === 'bot' ? 'Bot' :
+                                 senderType === 'ai' ? 'AI Assistant' : 'Sistema'
+
+              const updatedMessagesBySender = prevStats.messagesBySender.map(sender => {
+                if (sender.name === senderLabel) {
+                  return { ...sender, value: sender.value + 1 }
+                }
+                return sender
+              })
+
+              // If sender type doesn't exist, add it
+              const senderExists = updatedMessagesBySender.some(s => s.name === senderLabel)
+              if (!senderExists) {
+                updatedMessagesBySender.push({ name: senderLabel, value: 1 })
+              }
+
+              return {
+                ...prevStats,
+                totalMessages: newTotalMessages,
+                messagesLast7Days: updatedMessagesChart,
+                messagesBySender: updatedMessagesBySender
+              }
+            })
           }
+        }
+      )
+      .subscribe()
+
+    // Subscribe to new conversations
+    const conversationsChannel = supabase
+      .channel('dashboard-conversations')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'conversations',
+          filter: `platform_client_id=eq.${clientData.id}`
+        },
+        (payload) => {
+          const newConversation = payload.new as any
+
+          setStats(prevStats => {
+            // Increment total conversations
+            const newTotalConversations = prevStats.totalConversations + 1
+
+            // Update conversations by channel
+            const channelName = newConversation.channel.charAt(0).toUpperCase() + newConversation.channel.slice(1)
+            const updatedConversationsByChannel = prevStats.conversationsByChannel.map(ch => {
+              if (ch.name === channelName) {
+                return { ...ch, value: ch.value + 1 }
+              }
+              return ch
+            })
+
+            // If channel doesn't exist, add it
+            const channelExists = updatedConversationsByChannel.some(c => c.name === channelName)
+            if (!channelExists) {
+              updatedConversationsByChannel.push({ name: channelName, value: 1 })
+            }
+
+            return {
+              ...prevStats,
+              totalConversations: newTotalConversations,
+              conversationsByChannel: updatedConversationsByChannel
+            }
+          })
         }
       )
       .subscribe()
@@ -442,6 +523,7 @@ const DashboardPage: React.FC = () => {
 
     return () => {
       messagesChannel.unsubscribe()
+      conversationsChannel.unsubscribe()
       leadsChannel.unsubscribe()
     }
   }, [clientData?.id, dateRange, timeRange])
