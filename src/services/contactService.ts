@@ -17,12 +17,14 @@ export interface ContactFilters {
 
 /**
  * Fetch contacts with filters
+ * Returns only master contacts (those without master_contact_id)
  */
 export const getContacts = async (filters: ContactFilters): Promise<SocialContact[]> => {
   let query = supabase
     .from('social_contacts')
     .select('*')
     .eq('platform_client_id', filters.platformClientId)
+    .is('master_contact_id', null) // Only fetch master contacts
 
   // Apply channel filter
   if (filters.channels && filters.channels.length > 0) {
