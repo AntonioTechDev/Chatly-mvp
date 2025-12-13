@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import MainSidebar from '../components/layout/MainSidebar'
@@ -8,6 +8,7 @@ import type { Message } from '../types/database.types'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import toast from 'react-hot-toast'
+import { TimeRangeSelector, type TimeRange } from '../components/ui/TimeRangeSelector/TimeRangeSelector'
 
 const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444']
 
@@ -28,6 +29,8 @@ const DashboardPage: React.FC = () => {
   const [reportStartDate, setReportStartDate] = useState('')
   const [reportEndDate, setReportEndDate] = useState('')
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
+  const [timeRange, setTimeRange] = useState<TimeRange>('7d')
+  const [expandedChart, setExpandedChart] = useState<string | null>(null)
 
   const handleChannelSelect = (channel: 'whatsapp' | 'instagram' | 'messenger' | null) => {
     if (channel) {
@@ -45,6 +48,32 @@ const DashboardPage: React.FC = () => {
       minute: '2-digit',
     })
   }
+
+  // Calculate date range based on timeRange selection
+  const dateRange = useMemo(() => {
+    const end = new Date()
+    const start = new Date()
+
+    switch (timeRange) {
+      case '7d':
+        start.setDate(end.getDate() - 6)
+        break
+      case '1m':
+        start.setMonth(end.getMonth() - 1)
+        break
+      case '3m':
+        start.setMonth(end.getMonth() - 3)
+        break
+      case '6m':
+        start.setMonth(end.getMonth() - 6)
+        break
+      case '1y':
+        start.setFullYear(end.getFullYear() - 1)
+        break
+    }
+
+    return { start, end }
+  }, [timeRange])
 
   const formatTime = (dateString: string | null | undefined) => {
     if (!dateString) return ''
@@ -235,28 +264,73 @@ const DashboardPage: React.FC = () => {
           value: value as number
         }))
 
-        // Messages last 7 days - optimized with single query
-        const last7Days = Array.from({ length: 7 }, (_, i) => {
-          const date = new Date()
-          date.setDate(date.getDate() - (6 - i))
-          return date.toISOString().split('T')[0]
-        })
+        // Messages for selected time range - dynamic based on timeRange
+        const start = new Date(dateRange.start)
+        const end = new Date(dateRange.end)
 
-        // Fetch messages from last 7 days with a single query
-        const sevenDaysAgo = last7Days[0]
-        const { data: last7DaysMessages } = await supabase
+        // Calculate number of data points based on range
+        const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
+
+        // Determine the grouping interval
+        let intervals: { start: Date; end: Date; label: string }[] = []
+
+        if (timeRange === '7d') {
+          // Daily for 7 days
+          intervals = Array.from({ length: 7 }, (_, i) => {
+            const date = new Date(start)
+            date.setDate(start.getDate() + i)
+            return {
+              start: new Date(date.setHours(0, 0, 0, 0)),
+              end: new Date(date.setHours(23, 59, 59, 999)),
+              label: date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })
+            }
+          })
+        } else if (timeRange === '1m') {
+          // Daily for 1 month (30 days)
+          const days = 30
+          intervals = Array.from({ length: days }, (_, i) => {
+            const date = new Date(start)
+            date.setDate(start.getDate() + i)
+            return {
+              start: new Date(date.setHours(0, 0, 0, 0)),
+              end: new Date(date.setHours(23, 59, 59, 999)),
+              label: date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })
+            }
+          })
+        } else {
+          // Weekly aggregation for 3m, 6m, 1y
+          const weeks = Math.ceil(daysDiff / 7)
+          intervals = Array.from({ length: weeks }, (_, i) => {
+            const weekStart = new Date(start)
+            weekStart.setDate(start.getDate() + (i * 7))
+            const weekEnd = new Date(weekStart)
+            weekEnd.setDate(weekStart.getDate() + 6)
+            weekEnd.setHours(23, 59, 59, 999)
+            return {
+              start: weekStart,
+              end: weekEnd > end ? end : weekEnd,
+              label: weekStart.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })
+            }
+          })
+        }
+
+        // Fetch messages for the entire range
+        const { data: rangeMessages } = await supabase
           .from('messages')
           .select('created_at')
           .in('conversation_id', conversations?.map(c => c.id) || [])
-          .gte('created_at', sevenDaysAgo)
+          .gte('created_at', start.toISOString())
+          .lte('created_at', end.toISOString())
           .order('created_at', { ascending: true })
 
-        const messagesLast7Days = last7Days.map(date => {
-          const count = last7DaysMessages?.filter(msg =>
-            msg.created_at?.startsWith(date)
-          ).length || 0
+        const messagesLast7Days = intervals.map(interval => {
+          const count = rangeMessages?.filter(msg => {
+            if (!msg.created_at) return false
+            const msgDate = new Date(msg.created_at)
+            return msgDate >= interval.start && msgDate <= interval.end
+          }).length || 0
           return {
-            date: new Date(date).toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' }),
+            date: interval.label,
             messages: count
           }
         })
@@ -302,7 +376,7 @@ const DashboardPage: React.FC = () => {
 
     fetchRecentMessages()
 
-    const channel = supabase
+    const messagesChannel = supabase
       .channel('dashboard-messages')
       .on(
         'postgres_changes',
@@ -323,15 +397,46 @@ const DashboardPage: React.FC = () => {
 
           if (conversation?.platform_client_id === clientData.id) {
             setRecentMessages(prev => [newMessage, ...prev].slice(0, 20))
+
+            // Real-time stats update: increment total messages
+            setStats(prevStats => ({
+              ...prevStats,
+              totalMessages: prevStats.totalMessages + 1
+            }))
+          }
+        }
+      )
+      .subscribe()
+
+    // Subscribe to new leads
+    const leadsChannel = supabase
+      .channel('dashboard-leads')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'social_contacts',
+          filter: `platform_client_id=eq.${clientData.id}`
+        },
+        (payload) => {
+          // Real-time stats update: increment total leads (only for master contacts)
+          const newContact = payload.new as any
+          if (newContact.master_contact_id === null) {
+            setStats(prevStats => ({
+              ...prevStats,
+              totalLeads: prevStats.totalLeads + 1
+            }))
           }
         }
       )
       .subscribe()
 
     return () => {
-      channel.unsubscribe()
+      messagesChannel.unsubscribe()
+      leadsChannel.unsubscribe()
     }
-  }, [clientData?.id])
+  }, [clientData?.id, dateRange, timeRange])
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -374,22 +479,7 @@ const DashboardPage: React.FC = () => {
         ) : (
           <>
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-              {/* Total Conversations */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Conversazioni Totali</p>
-                    <p className="mt-2 text-3xl font-bold text-gray-900">{stats.totalConversations}</p>
-                  </div>
-                  <div className="p-3 bg-blue-100 rounded-full">
-                    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
               {/* Total Messages */}
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center justify-between">
@@ -421,65 +511,130 @@ const DashboardPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Report PDF Section */}
+            {/* Report Summary Section */}
             <div className="bg-white rounded-lg shadow p-6 mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Genera Report PDF</h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Seleziona il periodo per generare un report dettagliato delle tue statistiche
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="flex items-center justify-between mb-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Data Inizio
-                  </label>
-                  <input
-                    type="date"
-                    value={reportStartDate}
-                    onChange={(e) => setReportStartDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
+                  <h3 className="text-lg font-semibold text-gray-900">Riepilogo Periodo Attuale</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Statistiche per: {timeRange === '7d' ? 'Ultimi 7 Giorni' : timeRange === '1m' ? 'Ultimo Mese' : timeRange === '3m' ? 'Ultimi 3 Mesi' : timeRange === '6m' ? 'Ultimi 6 Mesi' : 'Ultimo Anno'}
+                  </p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Data Fine
-                  </label>
-                  <input
-                    type="date"
-                    value={reportEndDate}
-                    onChange={(e) => setReportEndDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                  </span>
+                  <span className="text-sm text-gray-600">Real-time</span>
                 </div>
-                <div className="flex items-end">
-                  <button
-                    onClick={generateReport}
-                    disabled={isGeneratingReport}
-                    className="w-full px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                  >
-                    {isGeneratingReport ? (
-                      <>
-                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                        <span>Generazione...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        <span>Genera Report</span>
-                      </>
-                    )}
-                  </button>
+              </div>
+
+              {/* Live Statistics Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Messaggi Periodo</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900">
+                    {stats.messagesLast7Days.reduce((sum, day) => sum + day.messages, 0)}
+                  </p>
+                </div>
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Lead Totali</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900">{stats.totalLeads}</p>
+                </div>
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Canali Attivi</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900">{stats.conversationsByChannel.length}</p>
+                </div>
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Media Msg/Giorno</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900">
+                    {stats.messagesLast7Days.length > 0
+                      ? Math.round(stats.messagesLast7Days.reduce((sum, day) => sum + day.messages, 0) / stats.messagesLast7Days.length)
+                      : 0}
+                  </p>
+                </div>
+              </div>
+
+              {/* Export Section */}
+              <div className="border-t border-gray-200 pt-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-medium text-gray-700">Esporta Report Personalizzato</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Data Inizio</label>
+                    <input
+                      type="date"
+                      value={reportStartDate}
+                      onChange={(e) => setReportStartDate(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Data Fine</label>
+                    <input
+                      type="date"
+                      value={reportEndDate}
+                      onChange={(e) => setReportEndDate(e.target.value)}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      onClick={generateReport}
+                      disabled={isGeneratingReport}
+                      className="w-full px-4 py-2 bg-primary-600 text-white text-sm rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isGeneratingReport ? (
+                        <>
+                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                          <span>Generazione...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          <span>Scarica PDF</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
 
+            {/* Time Range Selector */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Periodo di Visualizzazione</h3>
+              </div>
+              <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
+            </div>
+
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-              {/* Messages Last 7 Days */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Messaggi Ultimi 7 Giorni</h3>
-                <ResponsiveContainer width="100%" height={300}>
+              {/* Messages Chart */}
+              <div className={`bg-white rounded-lg shadow p-6 ${expandedChart === 'messages' ? 'lg:col-span-2' : ''}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Messaggi - {timeRange === '7d' ? 'Ultimi 7 Giorni' : timeRange === '1m' ? 'Ultimo Mese' : timeRange === '3m' ? 'Ultimi 3 Mesi' : timeRange === '6m' ? 'Ultimi 6 Mesi' : 'Ultimo Anno'}
+                  </h3>
+                  <button
+                    onClick={() => setExpandedChart(expandedChart === 'messages' ? null : 'messages')}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    title={expandedChart === 'messages' ? 'Riduci' : 'Espandi'}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {expandedChart === 'messages' ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                      )}
+                    </svg>
+                  </button>
+                </div>
+                <ResponsiveContainer width="100%" height={expandedChart === 'messages' ? 500 : 300}>
                   <LineChart data={stats.messagesLast7Days}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
@@ -491,9 +646,24 @@ const DashboardPage: React.FC = () => {
               </div>
 
               {/* Conversations by Channel */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Conversazioni per Canale</h3>
-                <ResponsiveContainer width="100%" height={300}>
+              <div className={`bg-white rounded-lg shadow p-6 ${expandedChart === 'channels' ? 'lg:col-span-2' : ''}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Conversazioni per Canale</h3>
+                  <button
+                    onClick={() => setExpandedChart(expandedChart === 'channels' ? null : 'channels')}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    title={expandedChart === 'channels' ? 'Riduci' : 'Espandi'}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {expandedChart === 'channels' ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                      )}
+                    </svg>
+                  </button>
+                </div>
+                <ResponsiveContainer width="100%" height={expandedChart === 'channels' ? 500 : 300}>
                   <PieChart>
                     <Pie
                       data={stats.conversationsByChannel}
@@ -501,7 +671,7 @@ const DashboardPage: React.FC = () => {
                       cy="50%"
                       labelLine={false}
                       label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
+                      outerRadius={expandedChart === 'channels' ? 150 : 80}
                       fill="#8884d8"
                       dataKey="value"
                     >
@@ -515,9 +685,24 @@ const DashboardPage: React.FC = () => {
               </div>
 
               {/* Messages by Sender */}
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Messaggi per Tipo</h3>
-                <ResponsiveContainer width="100%" height={300}>
+              <div className={`bg-white rounded-lg shadow p-6 ${expandedChart === 'sender' ? 'lg:col-span-2' : ''}`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Messaggi per Tipo</h3>
+                  <button
+                    onClick={() => setExpandedChart(expandedChart === 'sender' ? null : 'sender')}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    title={expandedChart === 'sender' ? 'Riduci' : 'Espandi'}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {expandedChart === 'sender' ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                      )}
+                    </svg>
+                  </button>
+                </div>
+                <ResponsiveContainer width="100%" height={expandedChart === 'sender' ? 500 : 300}>
                   <BarChart data={stats.messagesBySender}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
