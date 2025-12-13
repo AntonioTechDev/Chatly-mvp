@@ -35,6 +35,17 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
   return (
     <Card className={`document-card ${isSelected ? 'selected' : ''}`}>
       <div className="content">
+        {onSelect && (
+          <div className="checkbox-section">
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onSelect(document)}
+              onClick={(e) => e.stopPropagation()}
+              className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+            />
+          </div>
+        )}
         <div className="icon-section">
           <FileIcon mimeType={document.mime_type} />
         </div>
