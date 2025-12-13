@@ -101,47 +101,60 @@ export const ContactsList: React.FC<ContactsListProps> = ({
               <tr>
                 <th>Nome</th>
                 <th>Canale</th>
+                <th>Email</th>
                 <th>Telefono</th>
+                <th>Azienda</th>
                 <th>Primo Contatto</th>
                 <th>Ultimo Messaggio</th>
                 <th>Azioni</th>
               </tr>
             </thead>
             <tbody>
-              {contacts.map((contact) => (
-                <tr
-                  key={contact.id}
-                  onClick={() => onContactClick && onContactClick(contact)}
-                  className="table-row"
-                >
-                  <td className="name-cell">
-                    <div className="flex items-center gap-3">
-                      <div className="avatar">
-                        {(contact.display_name || contact.name || 'U').charAt(0).toUpperCase()}
-                      </div>
-                      <span className="font-medium">
-                        {contact.display_name || contact.name || contact.phone || 'Sconosciuto'}
-                      </span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      {/* Linked channels icons */}
-                      {linkedContactsMap[contact.id] && linkedContactsMap[contact.id].length > 1 && (
-                        <div className="flex items-center gap-1" title={`${linkedContactsMap[contact.id].length} canali collegati`}>
-                          {linkedContactsMap[contact.id].map((linked) => (
-                            <div key={linked.id} className="w-6 h-6 bg-white rounded-full flex items-center justify-center shadow border border-gray-200">
-                              {getPlatformIcon(linked.platform)}
-                            </div>
-                          ))}
+              {contacts.map((contact) => {
+                const linkedContacts = linkedContactsMap[contact.id] || []
+                // Get phone from any linked channel
+                const phone = linkedContacts.find(c => c.phone)?.phone || contact.phone
+                // Get email from any linked channel
+                const email = linkedContacts.find(c => c.email)?.email || contact.email
+                // Get company from any linked channel
+                const company = linkedContacts.find(c => c.company)?.company || contact.company
+
+                return (
+                  <tr
+                    key={contact.id}
+                    onClick={() => onContactClick && onContactClick(contact)}
+                    className="table-row"
+                  >
+                    <td className="name-cell">
+                      <div className="flex items-center gap-3">
+                        <div className="avatar">
+                          {(contact.display_name || contact.name || 'U').charAt(0).toUpperCase()}
                         </div>
-                      )}
-                      <span className={`channel-badge ${contact.platform}`}>
-                        {contact.platform}
-                      </span>
-                    </div>
-                  </td>
-                  <td>{contact.phone || '-'}</td>
+                        <span className="font-medium">
+                          {contact.display_name || contact.name || contact.phone || 'Sconosciuto'}
+                        </span>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        {/* Linked channels icons */}
+                        {linkedContacts.length > 1 && (
+                          <div className="flex items-center gap-1" title={`${linkedContacts.length} canali collegati`}>
+                            {linkedContacts.map((linked) => (
+                              <div key={linked.id} className="w-6 h-6 bg-white rounded-full flex items-center justify-center shadow border border-gray-200">
+                                {getPlatformIcon(linked.platform)}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <span className={`channel-badge ${contact.platform}`}>
+                          {contact.platform}
+                        </span>
+                      </div>
+                    </td>
+                    <td>{email || '-'}</td>
+                    <td>{phone || '-'}</td>
+                    <td>{company || '-'}</td>
                   <td>
                     {contact.first_contact
                       ? new Date(contact.first_contact).toLocaleDateString('it-IT')
@@ -178,7 +191,8 @@ export const ContactsList: React.FC<ContactsListProps> = ({
                     </button>
                   </td>
                 </tr>
-              ))}
+                )
+              })}
             </tbody>
           </table>
         </div>
