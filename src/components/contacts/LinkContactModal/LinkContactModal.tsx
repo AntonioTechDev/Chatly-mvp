@@ -159,11 +159,16 @@ export const LinkContactModal: React.FC<LinkContactModalProps> = ({
                         selectedContactId === contact.id ? 'bg-primary-50 border-l-4 border-primary-600' : ''
                       }`}
                     >
-                      {/* Avatar */}
-                      <div className="w-12 h-12 bg-gradient-to-br from-primary-100 to-primary-200 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-xl font-bold text-primary-700">
-                          {(contact.display_name || contact.name || 'U').charAt(0).toUpperCase()}
+                      {/* Platform Icon Avatar */}
+                      <div className="w-16 h-16 bg-gradient-to-br from-primary-100 to-primary-200 rounded-full flex items-center justify-center flex-shrink-0 relative">
+                        <span className="text-3xl">
+                          {getPlatformIcon(contact.platform)}
                         </span>
+                        <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md border border-gray-200">
+                          <span className="text-sm font-bold text-primary-700">
+                            {(contact.display_name || contact.name || 'U').charAt(0).toUpperCase()}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Contact Info */}
@@ -172,16 +177,16 @@ export const LinkContactModal: React.FC<LinkContactModalProps> = ({
                           <span className="font-semibold text-gray-900">
                             {contact.display_name || contact.name || 'Nome non disponibile'}
                           </span>
-                          <span className="text-lg" title={contact.platform}>
-                            {getPlatformIcon(contact.platform)}
-                          </span>
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-xs text-gray-500 uppercase font-medium mt-0.5">
+                          {contact.platform}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1">
                           {contact.email || contact.phone || `ID: ${contact.platform_user_id}`}
                         </div>
                         {contact.company && (
-                          <div className="text-xs text-gray-500">
-                            {contact.company}
+                          <div className="text-xs text-gray-500 mt-1">
+                            🏢 {contact.company}
                           </div>
                         )}
                       </div>

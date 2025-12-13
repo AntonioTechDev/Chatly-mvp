@@ -65,6 +65,30 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
     }
   }
 
+  const handleSetAsMaster = async (contactId: number) => {
+    if (!confirm('Sei sicuro di voler impostare questo contatto come principale?')) {
+      return
+    }
+
+    try {
+      setError(null)
+      // To make a contact the master:
+      // 1. Unlink it (becomes independent)
+      await unlinkContact(contactId)
+
+      // 2. Link all other contacts to this one (making it the new master)
+      const otherContacts = linkedContacts.filter(c => c.id !== contactId)
+      for (const contact of otherContacts) {
+        await linkContacts(contact.id, contactId)
+      }
+
+      await loadLinkedContacts()
+    } catch (err) {
+      console.error('Error setting master contact:', err)
+      setError(err instanceof Error ? err.message : 'Errore durante il cambio del contatto principale')
+    }
+  }
+
   const getPlatformIcon = (platform: string) => {
     switch (platform.toLowerCase()) {
       case 'whatsapp':
@@ -432,51 +456,93 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
                   return (
                     <div
                       key={contact.id}
-                      className={`bg-white rounded-lg p-3 border-2 ${isCurrent ? 'border-indigo-400' : 'border-indigo-200'}`}
+                      className={`bg-white rounded-lg p-4 border-2 ${isCurrent ? 'border-indigo-400' : 'border-indigo-200'}`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 flex-1">
-                          <span className="text-2xl" title={contact.platform}>
+                      {/* Header with Icon and Actions */}
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-3xl" title={contact.platform}>
                             {getPlatformIcon(contact.platform)}
                           </span>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <p className="text-sm font-semibold text-gray-900 truncate">
-                                {contact.display_name || contact.name || 'N/A'}
-                              </p>
-                              {isMaster && (
-                                <span className="text-xs px-1.5 py-0.5 bg-indigo-200 text-indigo-800 rounded font-medium">
-                                  Principale
-                                </span>
-                              )}
-                              {isCurrent && (
-                                <span className="text-xs px-1.5 py-0.5 bg-yellow-200 text-yellow-800 rounded font-medium">
-                                  Corrente
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className={`text-xs px-2 py-0.5 rounded-full border ${getPlatformColor(contact.platform)}`}>
-                                {contact.platform}
-                              </span>
-                              {contact.phone && (
-                                <span className="text-xs text-gray-600">{contact.phone}</span>
-                              )}
-                              {contact.email && (
-                                <span className="text-xs text-gray-600 truncate">{contact.email}</span>
-                              )}
-                            </div>
+                          <div>
+                            <p className="text-sm font-bold text-gray-900">
+                              {contact.display_name || contact.name || 'N/A'}
+                            </p>
+                            <span className={`text-xs px-2 py-0.5 rounded-full border ${getPlatformColor(contact.platform)} inline-block mt-1`}>
+                              {contact.platform}
+                            </span>
                           </div>
                         </div>
-                        {!isEditing && !isCurrent && contact.master_contact_id && (
-                          <button
-                            onClick={() => handleUnlinkContact(contact.id)}
-                            className="ml-2 p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-                            title="Scollega"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        {!isEditing && !isCurrent && (
+                          <div className="flex gap-1">
+                            {contact.master_contact_id && (
+                              <button
+                                onClick={() => handleUnlinkContact(contact.id)}
+                                className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                title="Scollega"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Contact Details - Vertical Layout */}
+                      <div className="space-y-2 text-sm">
+                        {/* Badges */}
+                        <div className="flex flex-wrap gap-2">
+                          {isMaster && (
+                            <span className="text-xs px-2 py-1 bg-indigo-200 text-indigo-800 rounded-full font-medium">
+                              ⭐ Principale
+                            </span>
+                          )}
+                          {isCurrent && (
+                            <span className="text-xs px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full font-medium">
+                              📍 Corrente
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Phone */}
+                        {contact.phone && (
+                          <div className="flex items-center gap-2 text-gray-700">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                             </svg>
+                            <span>{contact.phone}</span>
+                          </div>
+                        )}
+
+                        {/* Email */}
+                        {contact.email && (
+                          <div className="flex items-center gap-2 text-gray-700">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            <span className="truncate">{contact.email}</span>
+                          </div>
+                        )}
+
+                        {/* Company */}
+                        {contact.company && (
+                          <div className="flex items-center gap-2 text-gray-700">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            <span>{contact.company}</span>
+                          </div>
+                        )}
+
+                        {/* Set as Master button */}
+                        {!isEditing && !isMaster && linkedContacts.length > 1 && (
+                          <button
+                            onClick={() => handleSetAsMaster(contact.id)}
+                            className="mt-2 w-full py-1.5 px-3 text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded border border-indigo-200 transition-colors font-medium"
+                          >
+                            Imposta come Principale
                           </button>
                         )}
                       </div>
