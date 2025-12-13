@@ -153,11 +153,11 @@ const LogActivityPage: React.FC = () => {
   }
 
   const getDirectionLabel = (direction: string | null) => {
-    return direction === 'inbound' ? 'Ricevuto' : 'Inviato'
+    return direction === 'incoming' ? 'Ricevuto' : 'Inviato'
   }
 
   const getDirectionColor = (direction: string | null) => {
-    return direction === 'inbound' ? 'text-green-600' : 'text-blue-600'
+    return direction === 'incoming' ? 'text-green-600' : 'text-blue-600'
   }
 
   // Filter messages by search query
@@ -240,8 +240,8 @@ const LogActivityPage: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
                     <option value="all">Tutti</option>
-                    <option value="inbound">Ricevuti</option>
-                    <option value="outbound">Inviati</option>
+                    <option value="incoming">Ricevuti</option>
+                    <option value="outgoing">Inviati</option>
                   </select>
                 </div>
 
