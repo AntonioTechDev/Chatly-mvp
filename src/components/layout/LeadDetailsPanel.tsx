@@ -83,6 +83,13 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
       }
 
       await loadLinkedContacts()
+
+      // Notify parent component that master has changed
+      // Find the new master contact from linked contacts
+      const newMaster = linkedContacts.find(c => c.id === contactId)
+      if (newMaster) {
+        onUpdate(newMaster)
+      }
     } catch (err) {
       console.error('Error setting master contact:', err)
       setError(err instanceof Error ? err.message : 'Errore durante il cambio del contatto principale')
