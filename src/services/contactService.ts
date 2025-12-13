@@ -73,6 +73,131 @@ export const updateContact = async (
 }
 
 /**
+ * Get all linked contacts for a given contact
+ * Returns the master contact and all linked contacts
+ */
+export const getLinkedContacts = async (contactId: number): Promise<SocialContact[]> => {
+  // First, get the contact to determine if it's a master or linked contact
+  const { data: contact, error: contactError } = await supabase
+    .from('social_contacts')
+    .select('*')
+    .eq('id', contactId)
+    .single()
+
+  if (contactError) throw contactError
+  if (!contact) return []
+
+  // Determine the master contact ID
+  const masterContactId = contact.master_contact_id || contact.id
+
+  // Get the master contact and all linked contacts
+  const { data, error } = await supabase
+    .from('social_contacts')
+    .select('*')
+    .or(`id.eq.${masterContactId},master_contact_id.eq.${masterContactId}`)
+    .order('platform')
+
+  if (error) throw error
+
+  return data || []
+}
+
+/**
+ * Link a contact to a master contact
+ * If targetContact already has a master, use that master instead
+ */
+export const linkContacts = async (
+  contactId: number,
+  targetContactId: number
+): Promise<void> => {
+  // Prevent linking to self
+  if (contactId === targetContactId) {
+    throw new Error('Cannot link a contact to itself')
+  }
+
+  // Get target contact to check if it has a master
+  const { data: targetContact, error: targetError } = await supabase
+    .from('social_contacts')
+    .select('id, master_contact_id')
+    .eq('id', targetContactId)
+    .single()
+
+  if (targetError) throw targetError
+  if (!targetContact) throw new Error('Target contact not found')
+
+  // Determine the actual master ID
+  // If target already has a master, use that; otherwise, target becomes the master
+  const masterContactId = targetContact.master_contact_id || targetContact.id
+
+  // Get the contact being linked to check if it's already a master of other contacts
+  const { data: existingLinked, error: linkedError } = await supabase
+    .from('social_contacts')
+    .select('id')
+    .eq('master_contact_id', contactId)
+
+  if (linkedError) throw linkedError
+
+  // If this contact is already a master, we need to update all its linked contacts
+  if (existingLinked && existingLinked.length > 0) {
+    const linkedIds = existingLinked.map((c) => c.id)
+
+    // Update all previously linked contacts to point to the new master
+    const { error: updateError } = await supabase
+      .from('social_contacts')
+      .update({ master_contact_id: masterContactId })
+      .in('id', linkedIds)
+
+    if (updateError) throw updateError
+  }
+
+  // Link the contact to the master
+  const { error: linkError } = await supabase
+    .from('social_contacts')
+    .update({ master_contact_id: masterContactId })
+    .eq('id', contactId)
+
+  if (linkError) throw linkError
+}
+
+/**
+ * Unlink a contact from its master
+ */
+export const unlinkContact = async (contactId: number): Promise<void> => {
+  const { error } = await supabase
+    .from('social_contacts')
+    .update({ master_contact_id: null })
+    .eq('id', contactId)
+
+  if (error) throw error
+}
+
+/**
+ * Search contacts by name for linking
+ */
+export const searchContactsForLinking = async (
+  platformClientId: string,
+  searchQuery: string,
+  excludeContactId?: number
+): Promise<SocialContact[]> => {
+  let query = supabase
+    .from('social_contacts')
+    .select('*')
+    .eq('platform_client_id', platformClientId)
+    .or(`display_name.ilike.%${searchQuery}%,name.ilike.%${searchQuery}%`)
+    .limit(10)
+
+  if (excludeContactId) {
+    query = query.neq('id', excludeContactId)
+  }
+
+  const { data, error } = await query
+
+  if (error) throw error
+
+  return data || []
+}
+
+/**
  * Subscribe to realtime contact changes
  */
 export const subscribeToContacts = (

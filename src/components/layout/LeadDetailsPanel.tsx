@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import type { SocialContact } from '../../types/database.types'
-import { updateContact } from '../../services/contactService'
+import { updateContact, getLinkedContacts, linkContacts, unlinkContact } from '../../services/contactService'
+import { LinkContactModal } from '../contacts/LinkContactModal/LinkContactModal'
 
 interface LeadDetailsPanelProps {
   lead: SocialContact
@@ -14,6 +15,81 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
   const [isSaving, setIsSaving] = useState(false)
   const [editedLead, setEditedLead] = useState<Partial<SocialContact>>(lead)
   const [error, setError] = useState<string | null>(null)
+  const [linkedContacts, setLinkedContacts] = useState<SocialContact[]>([])
+  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false)
+  const [isLoadingLinked, setIsLoadingLinked] = useState(false)
+
+  // Load linked contacts when panel opens or lead changes
+  useEffect(() => {
+    if (isOpen && lead.id) {
+      loadLinkedContacts()
+    }
+  }, [isOpen, lead.id])
+
+  const loadLinkedContacts = async () => {
+    try {
+      setIsLoadingLinked(true)
+      const linked = await getLinkedContacts(lead.id)
+      setLinkedContacts(linked)
+    } catch (error) {
+      console.error('Error loading linked contacts:', error)
+    } finally {
+      setIsLoadingLinked(false)
+    }
+  }
+
+  const handleLinkContact = async (targetContactId: number) => {
+    try {
+      setError(null)
+      await linkContacts(lead.id, targetContactId)
+      await loadLinkedContacts()
+      setIsLinkModalOpen(false)
+    } catch (err) {
+      console.error('Error linking contact:', err)
+      setError(err instanceof Error ? err.message : 'Errore durante il collegamento')
+    }
+  }
+
+  const handleUnlinkContact = async (contactId: number) => {
+    if (!confirm('Sei sicuro di voler scollegare questo contatto?')) {
+      return
+    }
+
+    try {
+      setError(null)
+      await unlinkContact(contactId)
+      await loadLinkedContacts()
+    } catch (err) {
+      console.error('Error unlinking contact:', err)
+      setError(err instanceof Error ? err.message : 'Errore durante lo scollegamento')
+    }
+  }
+
+  const getPlatformIcon = (platform: string) => {
+    switch (platform.toLowerCase()) {
+      case 'whatsapp':
+        return '📱'
+      case 'instagram':
+        return '📸'
+      case 'messenger':
+        return '💬'
+      default:
+        return '👤'
+    }
+  }
+
+  const getPlatformColor = (platform: string) => {
+    switch (platform.toLowerCase()) {
+      case 'whatsapp':
+        return 'bg-green-100 text-green-800 border-green-200'
+      case 'instagram':
+        return 'bg-purple-100 text-purple-800 border-purple-200'
+      case 'messenger':
+        return 'bg-blue-100 text-blue-800 border-blue-200'
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200'
+    }
+  }
 
   if (!isOpen) return null
 
@@ -314,6 +390,105 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
                   </span>
                 </p>
               </>
+            )}
+          </div>
+
+          {/* Linked Contacts Section */}
+          <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-4 border-l-4 border-indigo-500">
+            <div className="flex items-center justify-between mb-3">
+              <h5 className="text-sm font-bold text-gray-900 flex items-center">
+                <svg className="w-4 h-4 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Canali Collegati
+              </h5>
+              {!isEditing && (
+                <button
+                  onClick={() => setIsLinkModalOpen(true)}
+                  className="text-xs px-2 py-1 bg-indigo-600 text-white hover:bg-indigo-700 rounded transition-colors flex items-center gap-1"
+                  title="Collega altro canale"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Collega
+                </button>
+              )}
+            </div>
+
+            {isLoadingLinked ? (
+              <div className="flex items-center justify-center py-4">
+                <svg className="animate-spin h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+            ) : linkedContacts.length > 0 ? (
+              <div className="space-y-2">
+                {linkedContacts.map((contact) => {
+                  const isCurrent = contact.id === lead.id
+                  const isMaster = !contact.master_contact_id
+
+                  return (
+                    <div
+                      key={contact.id}
+                      className={`bg-white rounded-lg p-3 border-2 ${isCurrent ? 'border-indigo-400' : 'border-indigo-200'}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 flex-1">
+                          <span className="text-2xl" title={contact.platform}>
+                            {getPlatformIcon(contact.platform)}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold text-gray-900 truncate">
+                                {contact.display_name || contact.name || 'N/A'}
+                              </p>
+                              {isMaster && (
+                                <span className="text-xs px-1.5 py-0.5 bg-indigo-200 text-indigo-800 rounded font-medium">
+                                  Principale
+                                </span>
+                              )}
+                              {isCurrent && (
+                                <span className="text-xs px-1.5 py-0.5 bg-yellow-200 text-yellow-800 rounded font-medium">
+                                  Corrente
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`text-xs px-2 py-0.5 rounded-full border ${getPlatformColor(contact.platform)}`}>
+                                {contact.platform}
+                              </span>
+                              {contact.phone && (
+                                <span className="text-xs text-gray-600">{contact.phone}</span>
+                              )}
+                              {contact.email && (
+                                <span className="text-xs text-gray-600 truncate">{contact.email}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        {!isEditing && !isCurrent && contact.master_contact_id && (
+                          <button
+                            onClick={() => handleUnlinkContact(contact.id)}
+                            className="ml-2 p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                            title="Scollega"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg p-4 text-center text-gray-500 text-sm">
+                <p>Nessun canale collegato</p>
+                <p className="text-xs mt-1">Clicca su "Collega" per associare altri contatti</p>
+              </div>
             )}
           </div>
 
@@ -635,6 +810,15 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
           </div>
         </div>
       </div>
+
+      {/* Link Contact Modal */}
+      <LinkContactModal
+        isOpen={isLinkModalOpen}
+        onClose={() => setIsLinkModalOpen(false)}
+        onLink={handleLinkContact}
+        currentContactId={lead.id}
+        platformClientId={String(lead.platform_client_id)}
+      />
     </>
   )
 }

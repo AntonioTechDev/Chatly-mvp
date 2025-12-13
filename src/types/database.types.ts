@@ -1,6 +1,6 @@
 /**
  * Database Types - Auto-generated from Supabase
- * Last updated: 2025-12-06 (updated with secure token storage)
+ * Last updated: 2025-12-13 (updated with master_contact_id for contact linking)
  *
  * DO NOT EDIT THE TYPES BELOW MANUALLY
  * Run: supabase gen types typescript --local > src/types/database.types.ts
@@ -433,6 +433,7 @@ export type Database = {
           last_interaction: string | null
           lead_score: number | null
           lead_source: string | null
+          master_contact_id: number | null
           name: string | null
           phone: string | null
           plan_suggested: string | null
@@ -456,6 +457,7 @@ export type Database = {
           last_interaction?: string | null
           lead_score?: number | null
           lead_source?: string | null
+          master_contact_id?: number | null
           name?: string | null
           phone?: string | null
           plan_suggested?: string | null
@@ -479,6 +481,7 @@ export type Database = {
           last_interaction?: string | null
           lead_score?: number | null
           lead_source?: string | null
+          master_contact_id?: number | null
           name?: string | null
           phone?: string | null
           plan_suggested?: string | null
@@ -496,6 +499,13 @@ export type Database = {
             columns: ["platform_client_id"]
             isOneToOne: false
             referencedRelation: "platform_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "social_contacts_master_contact_id_fkey"
+            columns: ["master_contact_id"]
+            isOneToOne: false
+            referencedRelation: "social_contacts"
             referencedColumns: ["id"]
           },
           {
@@ -792,15 +802,7 @@ export const Constants = {
   },
 } as const
 
-// Helper types for common queries
-export type PlatformClient = Tables<'platform_clients'>
+/**
+ * Convenience type for social_contacts table
+ */
 export type SocialContact = Tables<'social_contacts'>
-export type Message = Tables<'messages'>
-export type Conversation = Tables<'conversations'>
-export type Appointment = Tables<'appointments'>
-export type UserDocument = Tables<'user_documents'>
-
-// Extended types with relations
-export interface ConversationWithRelations extends Conversation {
-  social_contact: SocialContact
-}
