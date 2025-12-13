@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import MainSidebar from '../components/layout/MainSidebar'
 import { supabase } from '../lib/supabase'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
-import type { Message } from '../types/database.types'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import toast from 'react-hot-toast'
@@ -24,7 +23,6 @@ const DashboardPage: React.FC = () => {
     messagesBySender: [] as { name: string; value: number }[],
     messagesLast7Days: [] as { date: string; messages: number }[]
   })
-  const [recentMessages, setRecentMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [reportStartDate, setReportStartDate] = useState('')
   const [reportEndDate, setReportEndDate] = useState('')
@@ -83,13 +81,6 @@ const DashboardPage: React.FC = () => {
     return { start, end }
   }, [timeRange])
 
-  const formatTime = (dateString: string | null | undefined) => {
-    if (!dateString) return ''
-    return new Date(dateString).toLocaleTimeString('it-IT', {
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  }
 
   const generateReport = async () => {
     if (!reportStartDate || !reportEndDate) {
@@ -361,28 +352,6 @@ const DashboardPage: React.FC = () => {
     fetchStats()
 
     // Real-time messages subscription
-    const fetchRecentMessages = async () => {
-      // Get messages only from conversations of this client
-      const { data: clientConversations } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('platform_client_id', clientData.id)
-
-      const conversationIds = clientConversations?.map(c => c.id) || []
-
-      if (conversationIds.length > 0) {
-        const { data } = await supabase
-          .from('messages')
-          .select('*')
-          .in('conversation_id', conversationIds)
-          .order('created_at', { ascending: false })
-          .limit(20)
-
-        if (data) setRecentMessages(data)
-      }
-    }
-
-    fetchRecentMessages()
 
     const messagesChannel = supabase
       .channel('dashboard-messages')
@@ -404,8 +373,6 @@ const DashboardPage: React.FC = () => {
             .single()
 
           if (conversation?.platform_client_id === clientData.id) {
-            setRecentMessages(prev => [newMessage, ...prev].slice(0, 20))
-
             // Real-time stats update
             setStats(prevStats => {
               // Update total messages
@@ -863,64 +830,6 @@ const DashboardPage: React.FC = () => {
                 </ResponsiveContainer>
               </div>
 
-              {/* Real-time Messages Log */}
-              <div className={`bg-white rounded-lg shadow p-6 ${expandedCharts.includes('logs') ? 'lg:col-span-2' : ''}`}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold text-gray-900">Log Messaggi Real-Time</h3>
-                    <div className="flex items-center gap-1">
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                      </span>
-                      <span className="text-xs text-gray-500">Live</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => toggleChartExpansion('logs')}
-                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                    title={expandedCharts.includes('logs') ? 'Riduci' : 'Espandi'}
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      {expandedCharts.includes('logs') ? (
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      ) : (
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                      )}
-                    </svg>
-                  </button>
-                </div>
-                <div className={`space-y-2 overflow-y-auto ${expandedCharts.includes('logs') ? 'max-h-[600px]' : 'max-h-[300px]'}`}>
-                  {recentMessages.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-8">Nessun messaggio recente</p>
-                  ) : (
-                    recentMessages.map((msg) => (
-                      <div key={msg.id} className="flex items-start space-x-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                        <div className={`p-2 rounded-full ${
-                          msg.sender_type === 'user' ? 'bg-blue-100' :
-                          msg.sender_type === 'human_agent' ? 'bg-green-100' :
-                          msg.sender_type === 'bot' ? 'bg-purple-100' :
-                          'bg-gray-100'
-                        }`}>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs font-medium text-gray-900">
-                              {msg.sender_type === 'user' ? 'Cliente' : msg.sender_type === 'human_agent' ? 'Agente' : msg.sender_type === 'bot' ? 'Bot' : 'Sistema'}
-                            </p>
-                            <p className="text-xs text-gray-500">{formatTime(msg.created_at)}</p>
-                          </div>
-                          <p className="text-sm text-gray-600 truncate mt-1">{msg.content_text || '[Media]'}</p>
-                          <p className="text-xs text-gray-400 mt-1">{msg.direction === 'inbound' ? 'Ricevuto' : 'Inviato'}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
             </div>
           </>
         )}

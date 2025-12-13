@@ -8,6 +8,7 @@ import InboxPage from './pages/InboxPage'
 import UserInfoPage from './pages/UserInfoPage'
 import ContactsPage from './pages/ContactsPage'
 import DocumentsPage from './pages/DocumentsPage'
+import LogActivityPage from './pages/LogActivityPage'
 
 const RootRedirect = () => {
   const { isAuthenticated, isLoading } = useAuth()
@@ -89,6 +90,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <DocumentsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/log-activity"
+            element={
+              <ProtectedRoute>
+                <LogActivityPage />
               </ProtectedRoute>
             }
           />
