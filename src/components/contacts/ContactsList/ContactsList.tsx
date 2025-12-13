@@ -18,6 +18,7 @@ interface ContactsListProps {
   viewMode?: 'grid' | 'list' | 'table'
   emptyMessage?: string
   onContactClick?: (contact: SocialContact) => void
+  refreshTrigger?: number // Add refresh trigger to force reload
 }
 
 export const ContactsList: React.FC<ContactsListProps> = ({
@@ -25,6 +26,7 @@ export const ContactsList: React.FC<ContactsListProps> = ({
   viewMode = 'grid',
   emptyMessage = 'Nessun contatto trovato',
   onContactClick,
+  refreshTrigger = 0,
 }) => {
   const [linkedContactsMap, setLinkedContactsMap] = useState<Record<number, SocialContact[]>>({})
 
@@ -47,7 +49,7 @@ export const ContactsList: React.FC<ContactsListProps> = ({
     if (viewMode === 'table' && contacts.length > 0) {
       loadAllLinkedContacts()
     }
-  }, [contacts, viewMode])
+  }, [contacts, viewMode, refreshTrigger]) // Add refreshTrigger to dependencies
 
   // Get platform icon
   const getPlatformIcon = (platform: string) => {

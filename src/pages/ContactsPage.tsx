@@ -26,6 +26,7 @@ const ContactsPage: React.FC = () => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [selectedContact, setSelectedContact] = useState<SocialContact | null>(null)
   const [isLeadDetailsPanelOpen, setIsLeadDetailsPanelOpen] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   // Get all data and actions from hook
   const {
@@ -68,7 +69,8 @@ const ContactsPage: React.FC = () => {
   const handleLeadUpdate = (updatedLead: SocialContact) => {
     // Update selected contact
     setSelectedContact(updatedLead)
-    // The contacts list will be updated automatically through realtime subscription
+    // Trigger refresh of linked contacts in ContactsList
+    setRefreshTrigger(prev => prev + 1)
   }
 
   // Channel filter options
@@ -266,6 +268,7 @@ const ContactsPage: React.FC = () => {
               contacts={contacts}
               viewMode="table"
               onContactClick={handleContactClick}
+              refreshTrigger={refreshTrigger}
             />
 
             {/* Pagination */}
