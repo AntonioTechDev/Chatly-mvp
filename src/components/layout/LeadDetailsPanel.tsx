@@ -468,9 +468,6 @@ const LeadDetailsPanel: React.FC<LeadDetailsPanelProps> = ({ lead, isOpen, onClo
                             <p className="text-sm font-bold text-gray-900">
                               {contact.display_name || contact.name || 'N/A'}
                             </p>
-                            <span className={`text-xs px-2 py-0.5 rounded-full border ${getPlatformColor(contact.platform)} inline-block mt-1`}>
-                              {contact.platform}
-                            </span>
                           </div>
                         </div>
                         {!isEditing && !isCurrent && (
