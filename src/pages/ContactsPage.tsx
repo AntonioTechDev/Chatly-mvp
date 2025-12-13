@@ -279,7 +279,7 @@ const ContactsPage: React.FC = () => {
       {/* Lead Details Panel */}
       {selectedContact && (
         <LeadDetailsPanel
-          contact={selectedContact}
+          lead={selectedContact}
           isOpen={isLeadDetailsPanelOpen}
           onClose={handleCloseLeadDetails}
         />
