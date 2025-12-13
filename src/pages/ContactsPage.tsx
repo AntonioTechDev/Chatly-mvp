@@ -49,6 +49,7 @@ const ContactsPage: React.FC = () => {
     handleSort,
     handlePageChange,
     handleItemsPerPageChange,
+    refetch,
   } = useContacts()
 
   const handleChannelSelect = (channel: 'whatsapp' | 'instagram' | 'messenger' | null) => {
@@ -69,6 +70,8 @@ const ContactsPage: React.FC = () => {
   const handleLeadUpdate = (updatedLead: SocialContact) => {
     // Update selected contact
     setSelectedContact(updatedLead)
+    // Refetch all contacts to get updated master contacts list
+    refetch()
     // Trigger refresh of linked contacts in ContactsList
     setRefreshTrigger(prev => prev + 1)
   }
