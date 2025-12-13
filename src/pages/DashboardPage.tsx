@@ -30,12 +30,20 @@ const DashboardPage: React.FC = () => {
   const [reportEndDate, setReportEndDate] = useState('')
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
   const [timeRange, setTimeRange] = useState<TimeRange>('7d')
-  const [expandedChart, setExpandedChart] = useState<string | null>(null)
+  const [expandedCharts, setExpandedCharts] = useState<string[]>([])
 
   const handleChannelSelect = (channel: 'whatsapp' | 'instagram' | 'messenger' | null) => {
     if (channel) {
       navigate('/inbox', { state: { selectedChannel: channel } })
     }
+  }
+
+  const toggleChartExpansion = (chartId: string) => {
+    setExpandedCharts(prev =>
+      prev.includes(chartId)
+        ? prev.filter(id => id !== chartId)
+        : [...prev, chartId]
+    )
   }
 
   const formatDate = (dateString: string | null | undefined) => {
@@ -530,7 +538,7 @@ const DashboardPage: React.FC = () => {
               </div>
 
               {/* Live Statistics Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
                 <div className="border border-gray-200 rounded-lg p-4">
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Messaggi Periodo</p>
                   <p className="mt-2 text-2xl font-bold text-gray-900">
@@ -538,20 +546,53 @@ const DashboardPage: React.FC = () => {
                   </p>
                 </div>
                 <div className="border border-gray-200 rounded-lg p-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Lead Totali</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Messaggi Totali</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900">{stats.totalMessages}</p>
+                </div>
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Conversazioni</p>
+                  <p className="mt-2 text-2xl font-bold text-gray-900">{stats.totalConversations}</p>
+                </div>
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Nuovi Lead</p>
                   <p className="mt-2 text-2xl font-bold text-gray-900">{stats.totalLeads}</p>
                 </div>
                 <div className="border border-gray-200 rounded-lg p-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Canali Attivi</p>
-                  <p className="mt-2 text-2xl font-bold text-gray-900">{stats.conversationsByChannel.length}</p>
-                </div>
-                <div className="border border-gray-200 rounded-lg p-4">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Media Msg/Giorno</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Media/Giorno</p>
                   <p className="mt-2 text-2xl font-bold text-gray-900">
                     {stats.messagesLast7Days.length > 0
                       ? Math.round(stats.messagesLast7Days.reduce((sum, day) => sum + day.messages, 0) / stats.messagesLast7Days.length)
                       : 0}
                   </p>
+                </div>
+              </div>
+
+              {/* Detailed Breakdown */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* Conversazioni per Canale */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Conversazioni per Canale</p>
+                  <div className="space-y-2">
+                    {stats.conversationsByChannel.map((channel, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">{channel.name}</span>
+                        <span className="text-sm font-semibold text-gray-900">{channel.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Messaggi per Tipo */}
+                <div className="border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Messaggi per Tipo</p>
+                  <div className="space-y-2">
+                    {stats.messagesBySender.map((sender, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">{sender.name}</span>
+                        <span className="text-sm font-semibold text-gray-900">{sender.value}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -615,18 +656,27 @@ const DashboardPage: React.FC = () => {
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
               {/* Messages Chart */}
-              <div className={`bg-white rounded-lg shadow p-6 ${expandedChart === 'messages' ? 'lg:col-span-2' : ''}`}>
+              <div className={`bg-white rounded-lg shadow p-6 ${expandedCharts.includes('messages') ? 'lg:col-span-2' : ''}`}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    Messaggi - {timeRange === '7d' ? 'Ultimi 7 Giorni' : timeRange === '1m' ? 'Ultimo Mese' : timeRange === '3m' ? 'Ultimi 3 Mesi' : timeRange === '6m' ? 'Ultimi 6 Mesi' : 'Ultimo Anno'}
-                  </h3>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Messaggi - {timeRange === '7d' ? 'Ultimi 7 Giorni' : timeRange === '1m' ? 'Ultimo Mese' : timeRange === '3m' ? 'Ultimi 3 Mesi' : timeRange === '6m' ? 'Ultimi 6 Mesi' : 'Ultimo Anno'}
+                    </h3>
+                    <div className="flex items-center gap-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <span className="text-xs text-gray-500">Live</span>
+                    </div>
+                  </div>
                   <button
-                    onClick={() => setExpandedChart(expandedChart === 'messages' ? null : 'messages')}
+                    onClick={() => toggleChartExpansion('messages')}
                     className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                    title={expandedChart === 'messages' ? 'Riduci' : 'Espandi'}
+                    title={expandedCharts.includes('messages') ? 'Riduci' : 'Espandi'}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      {expandedChart === 'messages' ? (
+                      {expandedCharts.includes('messages') ? (
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       ) : (
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
@@ -634,7 +684,7 @@ const DashboardPage: React.FC = () => {
                     </svg>
                   </button>
                 </div>
-                <ResponsiveContainer width="100%" height={expandedChart === 'messages' ? 500 : 300}>
+                <ResponsiveContainer width="100%" height={expandedCharts.includes('messages') ? 500 : 300}>
                   <LineChart data={stats.messagesLast7Days}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="date" />
@@ -646,16 +696,25 @@ const DashboardPage: React.FC = () => {
               </div>
 
               {/* Conversations by Channel */}
-              <div className={`bg-white rounded-lg shadow p-6 ${expandedChart === 'channels' ? 'lg:col-span-2' : ''}`}>
+              <div className={`bg-white rounded-lg shadow p-6 ${expandedCharts.includes('channels') ? 'lg:col-span-2' : ''}`}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Conversazioni per Canale</h3>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-semibold text-gray-900">Conversazioni per Canale</h3>
+                    <div className="flex items-center gap-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <span className="text-xs text-gray-500">Live</span>
+                    </div>
+                  </div>
                   <button
-                    onClick={() => setExpandedChart(expandedChart === 'channels' ? null : 'channels')}
+                    onClick={() => toggleChartExpansion('channels')}
                     className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                    title={expandedChart === 'channels' ? 'Riduci' : 'Espandi'}
+                    title={expandedCharts.includes('channels') ? 'Riduci' : 'Espandi'}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      {expandedChart === 'channels' ? (
+                      {expandedCharts.includes('channels') ? (
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       ) : (
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
@@ -663,7 +722,7 @@ const DashboardPage: React.FC = () => {
                     </svg>
                   </button>
                 </div>
-                <ResponsiveContainer width="100%" height={expandedChart === 'channels' ? 500 : 300}>
+                <ResponsiveContainer width="100%" height={expandedCharts.includes('channels') ? 500 : 300}>
                   <PieChart>
                     <Pie
                       data={stats.conversationsByChannel}
@@ -671,7 +730,7 @@ const DashboardPage: React.FC = () => {
                       cy="50%"
                       labelLine={false}
                       label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={expandedChart === 'channels' ? 150 : 80}
+                      outerRadius={expandedCharts.includes('channels') ? 150 : 80}
                       fill="#8884d8"
                       dataKey="value"
                     >
@@ -685,16 +744,25 @@ const DashboardPage: React.FC = () => {
               </div>
 
               {/* Messages by Sender */}
-              <div className={`bg-white rounded-lg shadow p-6 ${expandedChart === 'sender' ? 'lg:col-span-2' : ''}`}>
+              <div className={`bg-white rounded-lg shadow p-6 ${expandedCharts.includes('sender') ? 'lg:col-span-2' : ''}`}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Messaggi per Tipo</h3>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-semibold text-gray-900">Messaggi per Tipo</h3>
+                    <div className="flex items-center gap-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <span className="text-xs text-gray-500">Live</span>
+                    </div>
+                  </div>
                   <button
-                    onClick={() => setExpandedChart(expandedChart === 'sender' ? null : 'sender')}
+                    onClick={() => toggleChartExpansion('sender')}
                     className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                    title={expandedChart === 'sender' ? 'Riduci' : 'Espandi'}
+                    title={expandedCharts.includes('sender') ? 'Riduci' : 'Espandi'}
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      {expandedChart === 'sender' ? (
+                      {expandedCharts.includes('sender') ? (
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       ) : (
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
@@ -702,7 +770,7 @@ const DashboardPage: React.FC = () => {
                     </svg>
                   </button>
                 </div>
-                <ResponsiveContainer width="100%" height={expandedChart === 'sender' ? 500 : 300}>
+                <ResponsiveContainer width="100%" height={expandedCharts.includes('sender') ? 500 : 300}>
                   <BarChart data={stats.messagesBySender}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
@@ -714,18 +782,33 @@ const DashboardPage: React.FC = () => {
               </div>
 
               {/* Real-time Messages Log */}
-              <div className="bg-white rounded-lg shadow p-6">
+              <div className={`bg-white rounded-lg shadow p-6 ${expandedCharts.includes('logs') ? 'lg:col-span-2' : ''}`}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Log Messaggi Real-Time</h3>
-                  <div className="flex items-center space-x-2">
-                    <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                    </span>
-                    <span className="text-sm text-gray-600">Live</span>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-semibold text-gray-900">Log Messaggi Real-Time</h3>
+                    <div className="flex items-center gap-1">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <span className="text-xs text-gray-500">Live</span>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => toggleChartExpansion('logs')}
+                    className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                    title={expandedCharts.includes('logs') ? 'Riduci' : 'Espandi'}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      {expandedCharts.includes('logs') ? (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      ) : (
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                      )}
+                    </svg>
+                  </button>
                 </div>
-                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                <div className={`space-y-2 overflow-y-auto ${expandedCharts.includes('logs') ? 'max-h-[600px]' : 'max-h-[300px]'}`}>
                   {recentMessages.length === 0 ? (
                     <p className="text-sm text-gray-500 text-center py-8">Nessun messaggio recente</p>
                   ) : (
