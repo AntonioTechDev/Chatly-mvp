@@ -8,11 +8,13 @@
  * - Component only handles layout and orchestration
  */
 
-import React from 'react'
+import React, { useState } from 'react'
 import type { ConversationWithRelations } from '../../types/database.types'
 import { useMessages } from '../../hooks/useMessages'
 import { SearchBar } from '../ui/SearchBar/SearchBar'
 import { MessagesList } from './MessagesList/MessagesList'
+import { sendHumanOperatorMessage } from '../../services/messageService'
+import './ChatArea.css'
 
 interface ChatAreaProps {
   conversation: ConversationWithRelations
@@ -42,6 +44,11 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     loadMoreMessages,
   } = useMessages(conversation.id)
 
+  // Message input state
+  const [messageText, setMessageText] = useState('')
+  const [isSending, setIsSending] = useState(false)
+  const [sendError, setSendError] = useState<string | null>(null)
+
   const getLeadName = () => {
     return (
       conversation.social_contact?.display_name ||
@@ -51,37 +58,86 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     )
   }
 
+  const handleSendMessage = async () => {
+    // Validate message
+    if (!messageText.trim()) {
+      return
+    }
+
+    // Validate required data
+    if (!conversation.social_contact) {
+      setSendError('Errore: dati del contatto mancanti')
+      return
+    }
+
+    if (!conversation.platform_client) {
+      setSendError('Errore: dati del client mancanti')
+      return
+    }
+
+    setIsSending(true)
+    setSendError(null)
+
+    try {
+      await sendHumanOperatorMessage(
+        messageText,
+        conversation.id,
+        conversation.social_contact,
+        conversation.platform_client
+      )
+
+      // Clear input on success
+      setMessageText('')
+    } catch (error) {
+      console.error('Failed to send message:', error)
+      setSendError(
+        error instanceof Error ? error.message : 'Errore durante l\'invio del messaggio'
+      )
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendMessage()
+    }
+  }
+
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-primary-600 border-t-transparent rounded-full mx-auto"></div>
-          <p className="mt-2 text-sm text-gray-600">Caricamento messaggi...</p>
+      <div className="chat-area">
+        <div className="loading">
+          <div className="loading-content">
+            <div className="spinner"></div>
+            <p className="loading-text">Caricamento messaggi...</p>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-50 h-full">
+    <div className="chat-area">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center">
-              <span className="text-primary-700 font-semibold">
+      <div className="header">
+        <div className="header-top">
+          <div className="header-user">
+            <div className="avatar">
+              <span className="avatar-text">
                 {getLeadName().charAt(0).toUpperCase()}
               </span>
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">{getLeadName()}</h3>
-              <p className="text-xs text-gray-500">{conversation.channel}</p>
+              <h3 className="user-name">{getLeadName()}</h3>
+              <p className="user-channel">{conversation.channel}</p>
             </div>
           </div>
           <button
             onClick={onToggleLeadDetails}
-            className="p-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+            className="toggle-btn"
             title={isLeadDetailsPanelOpen ? 'Nascondi dettagli lead' : 'Mostra dettagli lead'}
           >
             {isLeadDetailsPanelOpen ? (
@@ -113,7 +169,7 @@ const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
 
         {/* Filters */}
-        <div className="mt-4 space-y-2">
+        <div className="filters">
           {/* Search Input */}
           <SearchBar
             value={searchQuery}
@@ -122,10 +178,10 @@ const ChatArea: React.FC<ChatAreaProps> = ({
           />
 
           {/* Date Range */}
-          <div className="flex items-center space-x-2">
-            <div className="relative flex-1">
+          <div className="date-range">
+            <div className="date-input-wrapper">
               <svg
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"
+                className="date-icon"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -142,13 +198,13 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 value={startDate}
                 onChange={(e) => handleDateChange('start', e.target.value)}
                 placeholder="Data inizio"
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="date-input"
               />
             </div>
-            <span className="text-gray-500 text-sm">→</span>
-            <div className="relative flex-1">
+            <span className="date-separator">→</span>
+            <div className="date-input-wrapper">
               <svg
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400"
+                className="date-icon"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -165,13 +221,13 @@ const ChatArea: React.FC<ChatAreaProps> = ({
                 value={endDate}
                 onChange={(e) => handleDateChange('end', e.target.value)}
                 placeholder="Data fine"
-                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="date-input"
               />
             </div>
             {hasActiveFilters && (
               <button
                 onClick={handleClearFilters}
-                className="p-2 text-gray-400 hover:text-gray-600 rounded-md transition-colors"
+                className="clear-filters-btn"
                 title="Cancella filtri"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -200,6 +256,58 @@ const ChatArea: React.FC<ChatAreaProps> = ({
             : 'Nessun messaggio trovato'
         }
       />
+
+      {/* Message Input Area */}
+      <div className="input-container">
+        {sendError && (
+          <div className="error">
+            <svg className="error-icon" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <span>{sendError}</span>
+          </div>
+        )}
+        <div className="input-wrapper">
+          <div className="textarea-container">
+            <textarea
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Scrivi un messaggio..."
+              disabled={isSending}
+              rows={1}
+              className="textarea"
+            />
+            <div className="char-counter">
+              {messageText.length > 0 && `${messageText.length}`}
+            </div>
+          </div>
+          <button
+            onClick={handleSendMessage}
+            disabled={isSending || !messageText.trim()}
+            className="send-btn"
+            title={isSending ? 'Invio in corso...' : 'Invia messaggio (Enter)'}
+          >
+            {isSending ? (
+              <div className="spinner"></div>
+            ) : (
+              <svg
+                className="send-icon"
+                fill="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+              </svg>
+            )}
+          </button>
+        </div>
+        <div className="hint">
+          <svg className="hint-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Premi Invio per inviare, Shift+Invio per andare a capo
+        </div>
+      </div>
     </div>
   )
 }

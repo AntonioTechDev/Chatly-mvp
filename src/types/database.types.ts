@@ -806,3 +806,51 @@ export const Constants = {
  * Convenience type for social_contacts table
  */
 export type SocialContact = Tables<'social_contacts'>
+
+/**
+ * Convenience type for platform_clients table
+ */
+export type PlatformClient = Tables<'platform_clients'>
+
+/**
+ * Convenience type for conversations table
+ */
+export type Conversation = Tables<'conversations'>
+
+/**
+ * Convenience type for messages table
+ */
+export type Message = Tables<'messages'>
+
+/**
+ * Convenience type for appointments table
+ */
+export type Appointment = Tables<'appointments'>
+
+/**
+ * Types with relations
+ */
+export type ConversationWithRelations = Conversation & {
+  social_contact?: SocialContact
+  platform_client?: PlatformClient
+  messages?: Message[]
+}
+
+export type MessageWithRelations = Message & {
+  social_contact?: SocialContact
+  conversation?: Conversation
+}
+
+export type SocialContactWithRelations = SocialContact & {
+  platform_client?: PlatformClient
+  messages?: Message[]
+  conversations?: Conversation[]
+  appointments?: Appointment[]
+}
+
+export type DocumentMatch = {
+  content: string
+  id: number
+  metadata: Json
+  similarity: number
+}

@@ -5,7 +5,9 @@
  */
 
 import { supabase } from '../lib/supabase'
-import type { Message } from '../types/database.types'
+import type { Message, SocialContact, Tables } from '../types/database.types'
+
+type PlatformClient = Tables<'platform_clients'>
 
 export interface MessageFilters {
   conversationId: number
@@ -151,4 +153,95 @@ export const sendMessage = async (
   if (error) throw error
 
   return data
+}
+
+/**
+ * Interface for webhook payload data
+ */
+interface HumanOperatorWebhookPayload {
+  message: string
+  platform: string
+  platform_user_id: string
+  platform_client_id: number
+  social_contact_id: number
+  conversation_id: number
+  direction: string
+  created_at: string
+  platform_client_whatsapp_phone?: string
+  senderID?: string
+}
+
+/**
+ * Send a message from human operator via webhook
+ *
+ * @param message - The message text to send
+ * @param conversationId - The conversation ID
+ * @param socialContact - The social contact data
+ * @param platformClient - The platform client data
+ * @returns Promise that resolves when the webhook call is successful
+ */
+export const sendHumanOperatorMessage = async (
+  message: string,
+  conversationId: number,
+  socialContact: SocialContact,
+  platformClient: PlatformClient
+): Promise<void> => {
+  // Determine webhook URL based on environment
+  // MODE is automatically set by Vite: 'development' in localhost, 'production' on Vercel
+  const isProduction = import.meta.env.MODE === 'production'
+  const webhookUrl = isProduction
+    ? import.meta.env.VITE_HUMAN_OPERATOR_WEBHOOK_PROD
+    : import.meta.env.VITE_HUMAN_OPERATOR_WEBHOOK_TEST
+
+  if (!webhookUrl) {
+    throw new Error('Human operator webhook URL is not configured')
+  }
+
+  // Build base payload
+  const payload: HumanOperatorWebhookPayload = {
+    message,
+    platform: socialContact.platform,
+    platform_user_id: socialContact.platform_user_id,
+    platform_client_id: socialContact.platform_client_id,
+    social_contact_id: socialContact.id,
+    conversation_id: conversationId,
+    direction: 'outgoing',
+    created_at: new Date().toISOString(),
+  }
+
+  // Add platform-specific fields
+  const platform = socialContact.platform.toLowerCase()
+
+  if (platform === 'whatsapp') {
+    if (!platformClient.whatsapp_phone_id) {
+      throw new Error('WhatsApp phone ID is not configured for this platform client')
+    }
+    payload.platform_client_whatsapp_phone = platformClient.whatsapp_phone_id
+  } else if (platform === 'instagram') {
+    if (!platformClient.instagram_account_id) {
+      throw new Error('Instagram account ID is not configured for this platform client')
+    }
+    payload.senderID = platformClient.instagram_account_id
+  } else if (platform === 'messenger') {
+    if (!platformClient.messenger_page_id) {
+      throw new Error('Messenger page ID is not configured for this platform client')
+    }
+    payload.senderID = platformClient.messenger_page_id
+  } else {
+    throw new Error(`Unsupported platform: ${socialContact.platform}`)
+  }
+
+  // Call the webhook
+  const response = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Failed to send message via webhook: ${response.status} - ${errorText}`)
+  }
 }
