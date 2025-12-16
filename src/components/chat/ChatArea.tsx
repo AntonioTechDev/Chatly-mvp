@@ -14,6 +14,7 @@ import { useMessages } from '../../hooks/useMessages'
 import { SearchBar } from '../ui/SearchBar/SearchBar'
 import { MessagesList } from './MessagesList/MessagesList'
 import { sendHumanOperatorMessage } from '../../services/messageService'
+import { updateConversationStatus } from '../../services/conversationService'
 import './ChatArea.css'
 
 interface ChatAreaProps {
@@ -48,6 +49,13 @@ const ChatArea: React.FC<ChatAreaProps> = ({
   const [messageText, setMessageText] = useState('')
   const [isSending, setIsSending] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
+
+  // AI status state
+  const [aiStatus, setAiStatus] = useState<string>(() => {
+    const status = conversation.status?.toLowerCase() || 'active'
+    return status
+  })
+  const [isTogglingAI, setIsTogglingAI] = useState(false)
 
   const getLeadName = () => {
     return (
@@ -105,6 +113,21 @@ const ChatArea: React.FC<ChatAreaProps> = ({
     }
   }
 
+  const handleToggleAI = async () => {
+    setIsTogglingAI(true)
+    try {
+      const currentStatus = aiStatus.toLowerCase()
+      // Toggle: active -> Deactivated, deactivated -> Active
+      const newStatus = currentStatus === 'active' ? 'Deactivated' : 'Active'
+      await updateConversationStatus(conversation.id, newStatus)
+      setAiStatus(newStatus.toLowerCase())
+    } catch (error) {
+      console.error('Failed to toggle AI status:', error)
+    } finally {
+      setIsTogglingAI(false)
+    }
+  }
+
   // Loading state
   if (isLoading) {
     return (
@@ -135,37 +158,63 @@ const ChatArea: React.FC<ChatAreaProps> = ({
               <p className="user-channel">{conversation.channel}</p>
             </div>
           </div>
-          <button
-            onClick={onToggleLeadDetails}
-            className="toggle-btn"
-            title={isLeadDetailsPanelOpen ? 'Nascondi dettagli lead' : 'Mostra dettagli lead'}
-          >
-            {isLeadDetailsPanelOpen ? (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
-                />
-              </svg>
-            ) : (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                />
-              </svg>
-            )}
-          </button>
+          <div className="header-actions">
+            <button
+              onClick={handleToggleAI}
+              disabled={isTogglingAI}
+              className={`ai-toggle-btn ${aiStatus === 'active' ? 'active' : 'deactivated'}`}
+              title={aiStatus === 'active' ? 'AI Attivo - Clicca per disattivare' : 'AI Disattivato - Clicca per attivare'}
+            >
+              {isTogglingAI ? (
+                <div className="spinner-small"></div>
+              ) : (
+                <>
+                  <svg className="ai-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                    />
+                  </svg>
+                  <span className="ai-status-text">
+                    {aiStatus === 'active' ? 'AI Attivo' : 'AI Off'}
+                  </span>
+                </>
+              )}
+            </button>
+            <button
+              onClick={onToggleLeadDetails}
+              className="toggle-btn"
+              title={isLeadDetailsPanelOpen ? 'Nascondi dettagli lead' : 'Mostra dettagli lead'}
+            >
+              {isLeadDetailsPanelOpen ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                  />
+                </svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  />
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Filters */}

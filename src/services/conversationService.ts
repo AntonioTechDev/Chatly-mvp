@@ -155,3 +155,18 @@ export const subscribeToConversationMessages = (
 
   return messagesChannel
 }
+
+/**
+ * Update conversation status (Active/Deactivated)
+ */
+export const updateConversationStatus = async (
+  conversationId: number,
+  status: string
+): Promise<void> => {
+  const { error } = await supabase
+    .from('conversations')
+    .update({ status })
+    .eq('id', conversationId)
+
+  if (error) throw error
+}
