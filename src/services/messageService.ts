@@ -193,14 +193,6 @@ export const sendHumanOperatorMessage = async (
     ? import.meta.env.VITE_HUMAN_OPERATOR_WEBHOOK_PROD
     : import.meta.env.VITE_HUMAN_OPERATOR_WEBHOOK_TEST
 
-  console.log('🔍 Send Message Debug:', {
-    mode: import.meta.env.MODE,
-    isProduction,
-    webhookUrl,
-    conversationId,
-    platform: socialContact.platform,
-  })
-
   if (!webhookUrl) {
     throw new Error('Human operator webhook URL is not configured')
   }
@@ -239,33 +231,17 @@ export const sendHumanOperatorMessage = async (
     throw new Error(`Unsupported platform: ${socialContact.platform}`)
   }
 
-  console.log('📤 Sending payload to webhook:', JSON.stringify(payload, null, 2))
-
   // Call the webhook
-  try {
-    const response = await fetch(webhookUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    })
+  const response = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
 
-    console.log('📥 Webhook response status:', response.status)
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('❌ Webhook error response:', errorText)
-      throw new Error(`Failed to send message via webhook: ${response.status} - ${errorText}`)
-    }
-
-    const responseData = await response.text()
-    console.log('✅ Webhook success response:', responseData)
-  } catch (error) {
-    console.error('❌ Fetch error:', error)
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      throw new Error('Impossibile raggiungere il webhook. Verifica che n8n sia attivo e configurato per accettare richieste CORS.')
-    }
-    throw error
+  if (!response.ok) {
+    const errorText = await response.text()
+    throw new Error(`Failed to send message via webhook: ${response.status} - ${errorText}`)
   }
 }
