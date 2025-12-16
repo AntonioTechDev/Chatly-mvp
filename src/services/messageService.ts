@@ -190,12 +190,8 @@ export const sendHumanOperatorMessage = async (
   // MODE is automatically set by Vite: 'development' in localhost, 'production' on Vercel
   const isProduction = import.meta.env.MODE === 'production'
   const webhookUrl = isProduction
-    ? import.meta.env.VITE_HUMAN_OPERATOR_WEBHOOK_PROD
-    : import.meta.env.VITE_HUMAN_OPERATOR_WEBHOOK_TEST
-
-  if (!webhookUrl) {
-    throw new Error('Human operator webhook URL is not configured')
-  }
+    ? 'https://automagruppoitalia.app.n8n.cloud/webhook/human-operator'
+    : 'https://automagruppoitalia.app.n8n.cloud/webhook-test/human-operator'
 
   // Build base payload
   const payload: HumanOperatorWebhookPayload = {
