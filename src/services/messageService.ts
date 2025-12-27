@@ -5,9 +5,51 @@
  */
 
 import { supabase } from '../lib/supabase'
+import { sanitizeInput } from '../lib/security-utils'
 import type { Message, SocialContact, Tables } from '../types/database.types'
 
 type PlatformClient = Tables<'platform_clients'>
+
+/**
+ * Escapes special characters in LIKE/ILIKE patterns to prevent SQL injection
+ * @param input - String to escape
+ * @returns Escaped string safe for LIKE/ILIKE queries
+ */
+const escapeLikePattern = (input: string): string => {
+  return input.replace(/[%_]/g, '\\$&')
+}
+
+/**
+ * Generates HMAC-SHA256 signature for webhook authentication
+ * Uses Web Crypto API for browser compatibility
+ * @param payload - String payload to sign
+ * @param secret - Secret key for HMAC
+ * @returns Promise resolving to hex-encoded signature
+ */
+const generateHMAC = async (payload: string, secret: string): Promise<string> => {
+  // Convert secret and payload to ArrayBuffer
+  const encoder = new TextEncoder()
+  const keyData = encoder.encode(secret)
+  const messageData = encoder.encode(payload)
+
+  // Import the secret key
+  const key = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  )
+
+  // Generate signature
+  const signature = await crypto.subtle.sign('HMAC', key, messageData)
+
+  // Convert to hex string
+  const hashArray = Array.from(new Uint8Array(signature))
+  const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+
+  return hashHex
+}
 
 export interface MessageFilters {
   conversationId: number
@@ -60,9 +102,10 @@ export const searchMessages = async (
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: true })
 
-  // Search in message content
+  // Search in message content (with SQL injection protection)
   if (searchQuery) {
-    query = query.ilike('content_text', `%${searchQuery}%`)
+    const sanitizedQuery = escapeLikePattern(sanitizeInput(searchQuery, 100))
+    query = query.ilike('content_text', `%${sanitizedQuery}%`)
   }
 
   // Date range filter
@@ -227,13 +270,27 @@ export const sendHumanOperatorMessage = async (
     throw new Error(`Unsupported platform: ${socialContact.platform}`)
   }
 
-  // Call the webhook
+  // Generate HMAC signature for webhook authentication
+  const webhookSecret = import.meta.env.VITE_N8N_WEBHOOK_SECRET
+
+  if (!webhookSecret) {
+    console.error('VITE_N8N_WEBHOOK_SECRET is not configured')
+    throw new Error('Webhook authentication is not configured. Please contact system administrator.')
+  }
+
+  const payloadString = JSON.stringify(payload)
+
+  // Generate HMAC-SHA256 signature
+  const signature = await generateHMAC(payloadString, webhookSecret)
+
+  // Call the webhook with authentication header
   const response = await fetch(webhookUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'X-Webhook-Signature': signature,
     },
-    body: JSON.stringify(payload),
+    body: payloadString,
   })
 
   if (!response.ok) {

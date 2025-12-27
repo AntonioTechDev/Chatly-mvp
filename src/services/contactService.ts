@@ -5,7 +5,17 @@
  */
 
 import { supabase } from '../lib/supabase'
+import { sanitizeInput } from '../lib/security-utils'
 import type { SocialContact } from '../types/database.types'
+
+/**
+ * Escapes special characters in LIKE/ILIKE patterns to prevent SQL injection
+ * @param input - String to escape
+ * @returns Escaped string safe for LIKE/ILIKE queries
+ */
+const escapeLikePattern = (input: string): string => {
+  return input.replace(/[%_]/g, '\\$&')
+}
 
 export interface ContactFilters {
   platformClientId: string
@@ -239,11 +249,14 @@ export const searchContactsForLinking = async (
   searchQuery: string,
   excludeContactId?: number
 ): Promise<SocialContact[]> => {
+  // Sanitize and escape search query to prevent SQL injection
+  const sanitizedQuery = escapeLikePattern(sanitizeInput(searchQuery, 100))
+
   let query = supabase
     .from('social_contacts')
     .select('*')
     .eq('platform_client_id', platformClientId)
-    .or(`display_name.ilike.%${searchQuery}%,name.ilike.%${searchQuery}%`)
+    .or(`display_name.ilike.%${sanitizedQuery}%,name.ilike.%${sanitizedQuery}%`)
     .limit(10)
 
   if (excludeContactId) {

@@ -209,6 +209,88 @@ DROP POLICY IF EXISTS "Users can update own contacts" ON social_contacts;
 DROP POLICY IF EXISTS "Users can delete own contacts" ON social_contacts;
 */
 
+-- -----------------------------------------------------------------------------
+-- FIX #11: ABILITARE RLS PER documents (CRITICO)
+-- -----------------------------------------------------------------------------
+-- Problema: RLS non abilitato, utenti possono accedere a documenti di altri
+-- Impatto: IDOR vulnerability - accesso non autorizzato a file sensibili
+-- Soluzione: Abilitare RLS e creare policies complete
+
+ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
+
+-- Policy SELECT: Gli utenti possono vedere solo i propri documenti
+CREATE POLICY "Users can view own documents" ON documents
+FOR SELECT USING (
+  platform_client_id IN (
+    SELECT id FROM platform_clients WHERE user_id = auth.uid()
+  )
+);
+
+-- Policy INSERT: Gli utenti possono caricare solo i propri documenti
+CREATE POLICY "Users can insert own documents" ON documents
+FOR INSERT WITH CHECK (
+  platform_client_id IN (
+    SELECT id FROM platform_clients WHERE user_id = auth.uid()
+  )
+);
+
+-- Policy UPDATE: Gli utenti possono modificare solo i propri documenti
+CREATE POLICY "Users can update own documents" ON documents
+FOR UPDATE USING (
+  platform_client_id IN (
+    SELECT id FROM platform_clients WHERE user_id = auth.uid()
+  )
+);
+
+-- Policy DELETE: Gli utenti possono eliminare solo i propri documenti
+CREATE POLICY "Users can delete own documents" ON documents
+FOR DELETE USING (
+  platform_client_id IN (
+    SELECT id FROM platform_clients WHERE user_id = auth.uid()
+  )
+);
+
+-- -----------------------------------------------------------------------------
+-- FIX #12: ABILITARE RLS PER appointments (CRITICO)
+-- -----------------------------------------------------------------------------
+-- Problema: RLS non abilitato, utenti possono accedere ad appuntamenti di altri
+-- Impatto: IDOR vulnerability - accesso non autorizzato a informazioni sensibili
+-- Soluzione: Abilitare RLS e creare policies complete
+
+ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;
+
+-- Policy SELECT: Gli utenti possono vedere solo i propri appuntamenti
+CREATE POLICY "Users can view own appointments" ON appointments
+FOR SELECT USING (
+  platform_client_id IN (
+    SELECT id FROM platform_clients WHERE user_id = auth.uid()
+  )
+);
+
+-- Policy INSERT: Gli utenti possono creare solo i propri appuntamenti
+CREATE POLICY "Users can insert own appointments" ON appointments
+FOR INSERT WITH CHECK (
+  platform_client_id IN (
+    SELECT id FROM platform_clients WHERE user_id = auth.uid()
+  )
+);
+
+-- Policy UPDATE: Gli utenti possono modificare solo i propri appuntamenti
+CREATE POLICY "Users can update own appointments" ON appointments
+FOR UPDATE USING (
+  platform_client_id IN (
+    SELECT id FROM platform_clients WHERE user_id = auth.uid()
+  )
+);
+
+-- Policy DELETE: Gli utenti possono eliminare solo i propri appuntamenti
+CREATE POLICY "Users can delete own appointments" ON appointments
+FOR DELETE USING (
+  platform_client_id IN (
+    SELECT id FROM platform_clients WHERE user_id = auth.uid()
+  )
+);
+
 -- =============================================================================
 -- NOTE FINALI
 -- =============================================================================
