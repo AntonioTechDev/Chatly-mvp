@@ -366,7 +366,7 @@ export async function hasToken(
       return false
     }
 
-    return data[columnMap[tokenType]] !== null
+    return (data as any)[columnMap[tokenType]] !== null
   } catch (err) {
     console.error('Unexpected error checking token existence:', err)
     return false

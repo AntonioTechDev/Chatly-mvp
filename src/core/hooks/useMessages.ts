@@ -13,7 +13,6 @@ import {
   getMessages,
   searchMessages,
   subscribeToMessages,
-  sendMessage as sendMessageService,
 } from '../services/messageService'
 import type { Message } from '../types/database.types'
 import toast from 'react-hot-toast'
@@ -68,7 +67,7 @@ export const useMessages = (conversationId: number | null) => {
       const data = await getMessages(
         conversationId,
         MESSAGES_PER_PAGE,
-        oldestMessage.created_at
+        oldestMessage.created_at || undefined
       )
 
       setMessages((prev) => [...data, ...prev])
@@ -103,28 +102,6 @@ export const useMessages = (conversationId: number | null) => {
       setIsLoading(false)
     }
   }, [conversationId, searchQuery, startDate, endDate])
-
-  // Send message
-  const sendMessage = useCallback(
-    async (content: string) => {
-      if (!conversationId || !content.trim()) return
-
-      setIsSending(true)
-
-      try {
-        const newMessage = await sendMessageService(conversationId, content)
-        // Message will be added via realtime subscription
-        return newMessage
-      } catch (err: any) {
-        console.error('Error sending message:', err)
-        toast.error('Errore invio messaggio')
-        throw err
-      } finally {
-        setIsSending(false)
-      }
-    },
-    [conversationId]
-  )
 
   // Initial fetch on conversation change
   useEffect(() => {
@@ -198,7 +175,6 @@ export const useMessages = (conversationId: number | null) => {
     isLoadingMore,
     hasMore,
     error,
-    isSending,
 
     // Filter state
     searchQuery,
@@ -212,7 +188,6 @@ export const useMessages = (conversationId: number | null) => {
     handleClearFilters,
     handleSearch,
     loadMoreMessages,
-    sendMessage,
     refetch: fetchMessages,
   }
 }

@@ -1,24 +1,29 @@
+import React, { Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
-import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from '@/core/contexts/AuthContext'
 import ProtectedRoute from './components/layout/ProtectedRoute'
-import LoginPage from './pages/LoginPage'
-import DashboardPage from './pages/DashboardPage'
-import InboxPage from './pages/InboxPage'
-import UserInfoPage from './pages/UserInfoPage'
-import ContactsPage from './pages/ContactsPage'
-import DocumentsPage from './pages/DocumentsPage'
-import LogActivityPage from './pages/LogActivityPage'
+
+// Lazy loaded pages
+const LoginPage = React.lazy(() => import('./pages/LoginPage'))
+const DashboardPage = React.lazy(() => import('./pages/DashboardPage'))
+const InboxPage = React.lazy(() => import('./pages/InboxPage'))
+const UserInfoPage = React.lazy(() => import('./pages/UserInfoPage'))
+const ContactsPage = React.lazy(() => import('./pages/ContactsPage'))
+const DocumentsPage = React.lazy(() => import('./pages/DocumentsPage'))
+const LogActivityPage = React.lazy(() => import('./pages/LogActivityPage'))
+
+const LoadingSpinner = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+  </div>
+)
 
 const RootRedirect = () => {
   const { isAuthenticated, isLoading } = useAuth()
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Caricamento...</p>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />
@@ -50,59 +55,61 @@ function App() {
             },
           }}
         />
-        <Routes>
-          <Route path="/" element={<RootRedirect />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/inbox"
-            element={
-              <ProtectedRoute>
-                <InboxPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/user-info"
-            element={
-              <ProtectedRoute>
-                <UserInfoPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/contacts"
-            element={
-              <ProtectedRoute>
-                <ContactsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/documents"
-            element={
-              <ProtectedRoute>
-                <DocumentsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/log-activity"
-            element={
-              <ProtectedRoute>
-                <LogActivityPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <Suspense fallback={<LoadingSpinner />}>
+          <Routes>
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/inbox"
+              element={
+                <ProtectedRoute>
+                  <InboxPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/user-info"
+              element={
+                <ProtectedRoute>
+                  <UserInfoPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/contacts"
+              element={
+                <ProtectedRoute>
+                  <ContactsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/documents"
+              element={
+                <ProtectedRoute>
+                  <DocumentsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/log-activity"
+              element={
+                <ProtectedRoute>
+                  <LogActivityPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </AuthProvider>
     </BrowserRouter>
   )

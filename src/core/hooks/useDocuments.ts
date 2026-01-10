@@ -16,7 +16,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import toast from 'react-hot-toast'
 
-interface UserDocument {
+export interface UserDocument {
   id: number
   platform_client_id: number
   user_id: string
@@ -24,7 +24,7 @@ interface UserDocument {
   file_size: number
   mime_type: string
   storage_path: string
-  category: string
+  category: string | null
   description: string | null
   tags: string[] | null
   uploaded_at: string

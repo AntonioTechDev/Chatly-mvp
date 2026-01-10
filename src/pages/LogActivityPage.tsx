@@ -1,9 +1,11 @@
+
 import React, { useEffect, useState } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '@/core/contexts/AuthContext'
+import { Bell, Check, Clock, Filter, MessageSquare, Phone, Search, User } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import MainSidebar from '../components/layout/MainSidebar'
-import { supabase } from '../lib/supabase'
-import type { Message } from '../types/database.types'
+import { supabase } from '@/core/lib/supabase'
+import type { Json, Message } from '@/core/types/database.types'
 import toast from 'react-hot-toast'
 
 const LogActivityPage: React.FC = () => {
@@ -95,6 +97,8 @@ const LogActivityPage: React.FC = () => {
           const newMessage = payload.new as Message
 
           // Verify message belongs to this client's conversations
+          if (!newMessage.conversation_id) return
+
           const { data: conversation } = await supabase
             .from('conversations')
             .select('platform_client_id')
@@ -173,10 +177,22 @@ const LogActivityPage: React.FC = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      <MainSidebar
-        isMobileSidebarOpen={isMobileSidebarOpen}
-        setIsMobileSidebarOpen={setIsMobileSidebarOpen}
-      />
+      {/* Main Sidebar - Hidden on mobile, overlay on tablet, fixed on desktop */}
+      <div className={`${isMobileSidebarOpen ? 'block' : 'hidden'} lg:block fixed lg:relative inset-0 lg:inset-auto z-40`}>
+        {isMobileSidebarOpen && (
+          <div
+            className="lg:hidden absolute inset-0 bg-black bg-opacity-50"
+            onClick={() => setIsMobileSidebarOpen(false)}
+          />
+        )}
+        <div className="relative">
+          <MainSidebar onChannelSelect={(channel) => {
+            if (channel) {
+              navigate('/inbox', { state: { selectedChannel: channel } })
+            }
+          }} />
+        </div>
+      </div>
 
       <main className="flex-1 overflow-y-auto">
         <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4">
@@ -304,17 +320,17 @@ const LogActivityPage: React.FC = () => {
                         <div className="flex-1">
                           {/* Header */}
                           <div className="flex items-center gap-3 mb-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSenderTypeColor(msg.sender_type)}`}>
+                            <span className={`px - 2 py - 1 rounded - full text - xs font - medium ${getSenderTypeColor(msg.sender_type)} `}>
                               {getSenderTypeLabel(msg.sender_type)}
                             </span>
-                            <span className={`text-xs font-medium ${getDirectionColor(msg.direction)}`}>
+                            <span className={`text - xs font - medium ${getDirectionColor(msg.direction)} `}>
                               {getDirectionLabel(msg.direction)}
                             </span>
                             <span className="text-xs text-gray-500">{formatDate(msg.created_at)}</span>
                           </div>
 
                           {/* Message Content */}
-                          <div className={`${expandedMessage === msg.id ? '' : 'line-clamp-2'}`}>
+                          <div className={`${expandedMessage === msg.id ? '' : 'line-clamp-2'} `}>
                             <p className="text-sm text-gray-900">
                               {msg.content_text || <span className="italic text-gray-500">[Media o contenuto non testuale]</span>}
                             </p>
@@ -338,12 +354,7 @@ const LogActivityPage: React.FC = () => {
                                     <dd className="text-gray-900 mt-1">{msg.platform_message_id}</dd>
                                   </div>
                                 )}
-                                {msg.sender_id && (
-                                  <div>
-                                    <dt className="font-medium text-gray-500">Sender ID</dt>
-                                    <dd className="text-gray-900 mt-1">{msg.sender_id}</dd>
-                                  </div>
-                                )}
+
                               </dl>
                             </div>
                           )}
@@ -355,7 +366,7 @@ const LogActivityPage: React.FC = () => {
                           className="ml-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
                         >
                           <svg
-                            className={`w-5 h-5 transform transition-transform ${expandedMessage === msg.id ? 'rotate-180' : ''}`}
+                            className={`w - 5 h - 5 transform transition - transform ${expandedMessage === msg.id ? 'rotate-180' : ''} `}
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"

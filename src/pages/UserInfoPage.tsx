@@ -1,5 +1,5 @@
 import React from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '@/core/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import MainSidebar from '../components/layout/MainSidebar'
 
@@ -95,11 +95,10 @@ const UserInfoPage: React.FC = () => {
                 <dt className="text-sm font-medium text-gray-500">Stato</dt>
                 <dd className="mt-1">
                   <span
-                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      clientData?.status === 'active'
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${clientData?.status === 'active'
                         ? 'bg-green-100 text-green-800'
                         : 'bg-gray-100 text-gray-800'
-                    }`}
+                      }`}
                   >
                     {clientData?.status || 'N/A'}
                   </span>
@@ -150,11 +149,10 @@ const UserInfoPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-medium text-gray-900">WhatsApp</h4>
                 <span
-                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    clientData?.whatsapp_phone_id
+                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${clientData?.whatsapp_phone_id
                       ? 'bg-green-100 text-green-800'
                       : 'bg-gray-100 text-gray-800'
-                  }`}
+                    }`}
                 >
                   {clientData?.whatsapp_phone_id ? 'Connesso' : 'Non connesso'}
                 </span>
@@ -171,11 +169,10 @@ const UserInfoPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-medium text-gray-900">Instagram</h4>
                 <span
-                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    clientData?.instagram_account_id
+                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${clientData?.instagram_account_id
                       ? 'bg-green-100 text-green-800'
                       : 'bg-gray-100 text-gray-800'
-                  }`}
+                    }`}
                 >
                   {clientData?.instagram_account_id ? 'Connesso' : 'Non connesso'}
                 </span>
@@ -192,11 +189,10 @@ const UserInfoPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-medium text-gray-900">Messenger</h4>
                 <span
-                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    clientData?.messenger_page_id
+                  className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${clientData?.messenger_page_id
                       ? 'bg-green-100 text-green-800'
                       : 'bg-gray-100 text-gray-800'
-                  }`}
+                    }`}
                 >
                   {clientData?.messenger_page_id ? 'Connesso' : 'Non connesso'}
                 </span>

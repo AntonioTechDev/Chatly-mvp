@@ -13,7 +13,7 @@ import React, { useMemo } from 'react'
 import { Card } from '../../ui/Card/Card'
 import { Badge } from '../../ui/Badge/Badge'
 import './ConversationCard.css'
-import type { ConversationWithRelations } from '../../../types/database.types'
+import type { ConversationWithRelations } from '@/core/types/database.types'
 
 interface ConversationCardProps {
   conversation: ConversationWithRelations
@@ -33,7 +33,6 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
       contact?.display_name ||
       contact?.name ||
       contact?.phone ||
-      contact?.recipient_id ||
       'Sconosciuto'
     )
   }, [conversation.social_contact])
@@ -117,7 +116,7 @@ export const ConversationCard: React.FC<ConversationCardProps> = ({
 
           <div className="message-preview">
             <p className="message">{messagePreview}</p>
-            <Badge variant={channelVariant} size="sm">
+            <Badge variant={channelVariant}>
               {conversation.channel}
             </Badge>
           </div>

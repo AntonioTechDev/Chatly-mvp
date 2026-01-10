@@ -78,7 +78,7 @@ export const getSocialContact = async (id: number) => {
     .from('social_contacts')
     .select(`
       *,
-      platform_client:platform_clients(*),
+      platform_client:platform_clients!platform_client_id(*),
       messages(*),
       conversations(*),
       appointments(*)
@@ -150,8 +150,8 @@ export const getConversations = async (
     .from('conversations')
     .select(`
       *,
-      social_contact:social_contacts(*),
-      platform_client:platform_clients(*),
+      social_contact:social_contacts!social_contact_id(*),
+      platform_client:platform_clients!platform_client_id(*),
       messages(*)
     `)
     .eq('platform_client_id', platformClientId)
@@ -172,8 +172,8 @@ export const getConversation = async (id: number) => {
     .from('conversations')
     .select(`
       *,
-      social_contact:social_contacts(*),
-      platform_client:platform_clients(*),
+      social_contact:social_contacts!social_contact_id(*),
+      platform_client:platform_clients!platform_client_id(*),
       messages(*)
     `)
     .eq('id', id)
@@ -230,8 +230,8 @@ export const getMessages = async (
     .from('messages')
     .select(`
       *,
-      social_contact:social_contacts(*),
-      conversation:conversations(*)
+      social_contact:social_contacts!social_contact_id(*),
+      conversation:conversations!conversation_id(*)
     `)
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: true })
@@ -281,8 +281,8 @@ export const getAppointments = async (
     .from('appointments')
     .select(`
       *,
-      social_contact:social_contacts(*),
-      platform_client:platform_clients(*)
+      social_contact:social_contacts!social_contact_id(*),
+      platform_client:platform_clients!platform_client_id(*)
     `)
     .eq('platform_client_id', platformClientId)
     .order('scheduled_for', { ascending: true })

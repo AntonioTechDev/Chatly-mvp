@@ -1,15 +1,15 @@
 import React from 'react'
 import { DocumentCard } from '../DocumentCard/DocumentCard'
 import './DocumentsList.css'
-import type { Document } from '../../types/database.types'
+import type { UserDocument } from '@/core/hooks/useDocuments'
 
 interface DocumentsListProps {
-  documents: Document[]
-  onViewDocument?: (document: Document) => void
-  onDownloadDocument?: (document: Document) => void
-  onDeleteDocument?: (document: Document) => void
+  documents: UserDocument[]
+  onViewDocument?: (document: UserDocument) => void
+  onDownloadDocument?: (document: UserDocument) => void
+  onDeleteDocument?: (document: UserDocument) => void
   selectedIds?: number[]
-  onSelectionChange?: (document: Document) => void
+  onSelectionChange?: (document: UserDocument) => void
   emptyMessage?: string
   enableSelection?: boolean
   viewMode?: 'grid' | 'list'

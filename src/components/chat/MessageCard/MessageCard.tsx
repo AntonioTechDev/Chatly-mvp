@@ -10,10 +10,14 @@
 
 import React, { useMemo } from 'react'
 import './MessageCard.css'
-import type { Message } from '../../../types/database.types'
+import type { Message } from '@/core/types/database.types'
+
+interface ExtendedMessage extends Message {
+  status?: string
+}
 
 interface MessageCardProps {
-  message: Message
+  message: ExtendedMessage
   isOutgoing?: boolean
 }
 

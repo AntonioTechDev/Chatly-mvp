@@ -173,30 +173,7 @@ export const subscribeToMessages = (
   return channel
 }
 
-/**
- * Send a message (placeholder - to be implemented with actual API)
- */
-export const sendMessage = async (
-  conversationId: number,
-  content: string,
-  senderType: 'human_agent' | 'ai' | 'bot' = 'human_agent'
-): Promise<Message> => {
-  const { data, error } = await supabase
-    .from('messages')
-    .insert({
-      conversation_id: conversationId,
-      content_text: content,
-      sender_type: senderType,
-      direction: 'outbound',
-      created_at: new Date().toISOString(),
-    })
-    .select()
-    .single()
 
-  if (error) throw error
-
-  return data
-}
 
 /**
  * Interface for webhook payload data

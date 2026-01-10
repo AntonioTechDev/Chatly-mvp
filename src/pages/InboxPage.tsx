@@ -4,7 +4,7 @@ import MainSidebar from '../components/layout/MainSidebar'
 import ConversationsSidebar from '../components/chat/ConversationsSidebar'
 import ChatArea from '../components/chat/ChatArea'
 import LeadDetailsPanel from '../components/layout/LeadDetailsPanel'
-import type { ConversationWithRelations } from '../types/database.types'
+import type { ConversationWithRelations } from '@/core/types/database.types'
 
 const InboxPage: React.FC = () => {
   const location = useLocation()

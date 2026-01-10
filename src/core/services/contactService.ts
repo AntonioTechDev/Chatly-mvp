@@ -18,7 +18,7 @@ const escapeLikePattern = (input: string): string => {
 }
 
 export interface ContactFilters {
-  platformClientId: string
+  platformClientId: number
   searchQuery?: string
   channels?: string[]
   startDate?: string
@@ -245,7 +245,7 @@ export const unlinkContact = async (contactId: number): Promise<void> => {
  * Search contacts by name for linking
  */
 export const searchContactsForLinking = async (
-  platformClientId: string,
+  platformClientId: number,
   searchQuery: string,
   excludeContactId?: number
 ): Promise<SocialContact[]> => {
@@ -274,7 +274,7 @@ export const searchContactsForLinking = async (
  * Subscribe to realtime contact changes
  */
 export const subscribeToContacts = (
-  platformClientId: string,
+  platformClientId: number,
   callbacks: {
     onInsert?: (contact: SocialContact) => void
     onUpdate?: (contact: SocialContact) => void

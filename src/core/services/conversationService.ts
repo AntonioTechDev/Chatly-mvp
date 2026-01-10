@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase'
 import type { ConversationWithRelations } from '../types/database.types'
 
 export interface ConversationFilters {
-  platformClientId: string
+  platformClientId: number
   channel: 'whatsapp' | 'instagram' | 'messenger'
   searchQuery?: string
   startDate?: string
@@ -27,8 +27,8 @@ export const getConversations = async (
     .from('conversations')
     .select(`
       *,
-      social_contact:social_contacts(*),
-      platform_client:platform_clients(*)
+      social_contact:social_contacts!social_contact_id(*),
+      platform_client:platform_clients!platform_client_id(*)
     `)
     .eq('platform_client_id', filters.platformClientId)
     .eq('channel', filters.channel)
@@ -98,9 +98,9 @@ export const subscribeToConversations = (
           .from('conversations')
           .select(`
             *,
-            social_contact:social_contacts(*),
-            platform_client:platform_clients(*)
-          `)
+      social_contact:social_contacts!social_contact_id(*),
+      platform_client:platform_clients!platform_client_id(*)
+    `)
           .eq('id', payload.new.id)
           .single()
 

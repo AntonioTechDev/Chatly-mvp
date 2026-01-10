@@ -10,7 +10,7 @@
 import React from 'react'
 import { ConversationCard } from '../ConversationCard/ConversationCard'
 import './ConversationsList.css'
-import type { ConversationWithRelations } from '../../../types/database.types'
+import type { ConversationWithRelations } from '@/core/types/database.types'
 
 interface ConversationsListProps {
   conversations: ConversationWithRelations[]

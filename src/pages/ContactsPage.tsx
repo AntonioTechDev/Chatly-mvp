@@ -17,9 +17,9 @@ import { Pagination } from '../components/ui/Pagination/Pagination'
 import { PageSizeSelector } from '../components/ui/PageSizeSelector/PageSizeSelector'
 import { ContactsList } from '../components/contacts/ContactsList/ContactsList'
 import LeadDetailsPanel from '../components/layout/LeadDetailsPanel'
-import { useContacts } from '../hooks/useContacts'
-import type { SortField } from '../hooks/useContacts'
-import type { SocialContact } from '../types/database.types'
+import { useContacts } from '@/core/hooks/useContacts'
+import type { SortField } from '@/core/hooks/useContacts'
+import type { SocialContact } from '@/core/types/database.types'
 
 const ContactsPage: React.FC = () => {
   const navigate = useNavigate()
@@ -91,11 +91,10 @@ const ContactsPage: React.FC = () => {
     return (
       <button
         onClick={() => handleSort(field)}
-        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-          isActive
+        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${isActive
             ? 'bg-primary-600 text-white'
             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-        }`}
+          }`}
       >
         {label}
         {arrow}
@@ -126,9 +125,8 @@ const ContactsPage: React.FC = () => {
 
       {/* Main Sidebar */}
       <div
-        className={`${
-          isMobileSidebarOpen ? 'block' : 'hidden'
-        } lg:block fixed lg:relative inset-0 lg:inset-auto z-40`}
+        className={`${isMobileSidebarOpen ? 'block' : 'hidden'
+          } lg:block fixed lg:relative inset-0 lg:inset-auto z-40`}
       >
         {isMobileSidebarOpen && (
           <div
@@ -203,11 +201,10 @@ const ContactsPage: React.FC = () => {
                 <button
                   key={channel.value}
                   onClick={() => handleChannelToggle(channel.value)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    selectedChannels.includes(channel.value)
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${selectedChannels.includes(channel.value)
                       ? 'bg-primary-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                    }`}
                 >
                   {channel.label}
                 </button>

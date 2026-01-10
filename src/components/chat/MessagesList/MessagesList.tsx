@@ -11,10 +11,10 @@
 import React, { useEffect, useRef } from 'react'
 import { MessageCard } from '../MessageCard/MessageCard'
 import './MessagesList.css'
-import type { Message } from '../../../types/database.types'
+import type { MessageWithRelations } from '@/core/types/database.types'
 
 interface MessagesListProps {
-  messages: Message[]
+  messages: MessageWithRelations[]
   emptyMessage?: string
   isLoadingMore?: boolean
   hasMore?: boolean

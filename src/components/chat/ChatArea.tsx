@@ -9,12 +9,12 @@
  */
 
 import React, { useState } from 'react'
-import type { ConversationWithRelations } from '../../types/database.types'
-import { useMessages } from '../../hooks/useMessages'
+import type { ConversationWithRelations } from '@/core/types/database.types'
+import { useMessages } from '@/core/hooks/useMessages'
 import { SearchBar } from '../ui/SearchBar/SearchBar'
 import { MessagesList } from './MessagesList/MessagesList'
-import { sendHumanOperatorMessage } from '../../services/messageService'
-import { updateConversationStatus } from '../../services/conversationService'
+import { sendHumanOperatorMessage } from '@/core/services/messageService'
+import { updateConversationStatus } from '@/core/services/conversationService'
 import './ChatArea.css'
 
 interface ChatAreaProps {

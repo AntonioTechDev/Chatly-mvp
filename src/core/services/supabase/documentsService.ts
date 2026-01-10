@@ -15,7 +15,8 @@ export interface Document {
   uploaded_at: string
   drive_file_id?: string | null
   drive_web_view_link?: string | null
-  platform_client_id?: number
+  platform_client_id: number
+  user_id: string
 }
 
 /**
@@ -23,7 +24,7 @@ export interface Document {
  */
 export async function fetchDocuments(platformClientId: number): Promise<Document[]> {
   const { data, error } = await supabase
-    .from('documents')
+    .from('user_documents')
     .select('*')
     .eq('platform_client_id', platformClientId)
     .order('uploaded_at', { ascending: false })
@@ -37,7 +38,7 @@ export async function fetchDocuments(platformClientId: number): Promise<Document
  */
 export async function deleteDocument(documentId: number): Promise<void> {
   const { error } = await supabase
-    .from('documents')
+    .from('user_documents')
     .delete()
     .eq('id', documentId)
 
@@ -49,7 +50,7 @@ export async function deleteDocument(documentId: number): Promise<void> {
  */
 export async function createDocument(document: Omit<Document, 'id' | 'uploaded_at'>): Promise<Document> {
   const { data, error } = await supabase
-    .from('documents')
+    .from('user_documents')
     .insert(document)
     .select()
     .single()

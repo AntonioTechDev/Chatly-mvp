@@ -1,13 +1,14 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '@/core/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import MainSidebar from '../components/layout/MainSidebar'
-import { supabase } from '../lib/supabase'
+import { supabase } from '@/core/lib/supabase'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import toast from 'react-hot-toast'
 import { TimeRangeSelector, type TimeRange } from '../components/ui/TimeRangeSelector/TimeRangeSelector'
+import type { Message } from '@/core/types/database.types'
 
 const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444']
 
@@ -100,7 +101,7 @@ const DashboardPage: React.FC = () => {
       const { data: conversations, error: convError } = await supabase
         .from('conversations')
         .select('*, messages(*)')
-        .eq('platform_client_id', clientData?.id || '')
+        .eq('platform_client_id', clientData?.id ?? 0)
         .gte('started_at', reportStartDate)
         .lte('started_at', reportEndDate + 'T23:59:59')
 
@@ -109,7 +110,7 @@ const DashboardPage: React.FC = () => {
       const { data: leads, error: leadsError } = await supabase
         .from('social_contacts')
         .select('*')
-        .eq('platform_client_id', clientData?.id || '')
+        .eq('platform_client_id', clientData?.id ?? 0)
         .gte('first_contact', reportStartDate)
         .lte('first_contact', reportEndDate + 'T23:59:59')
 
@@ -118,7 +119,8 @@ const DashboardPage: React.FC = () => {
       // Process data
       const allMessages = conversations?.flatMap(conv => conv.messages || []) || []
       const channelCounts = conversations?.reduce((acc: any, conv) => {
-        acc[conv.channel] = (acc[conv.channel] || 0) + 1
+        const channel = conv.channel || 'unknown'
+        acc[channel] = (acc[channel] || 0) + 1
         return acc
       }, {})
 
@@ -171,7 +173,7 @@ const DashboardPage: React.FC = () => {
       autoTable(doc, {
         startY: currentY + 6,
         head: [['Canale', 'Numero Conversazioni']],
-        body: channelData,
+        body: channelData as any[],
       })
 
       // Messages by sender type
@@ -187,7 +189,7 @@ const DashboardPage: React.FC = () => {
       autoTable(doc, {
         startY: currentY2 + 6,
         head: [['Tipo Mittente', 'Numero Messaggi']],
-        body: senderData,
+        body: senderData as any[],
       })
 
       // Save PDF
@@ -234,7 +236,8 @@ const DashboardPage: React.FC = () => {
 
         // Process conversations by channel
         const channelCounts = conversations?.reduce((acc: any, conv) => {
-          acc[conv.channel] = (acc[conv.channel] || 0) + 1
+          const channel = conv.channel || 'unknown'
+          acc[channel] = (acc[channel] || 0) + 1
           return acc
         }, {})
 
@@ -365,6 +368,8 @@ const DashboardPage: React.FC = () => {
         async (payload) => {
           const newMessage = payload.new as Message
 
+          if (!newMessage.conversation_id) return
+
           // Verify message belongs to this client's conversations
           const { data: conversation } = await supabase
             .from('conversations')
@@ -392,9 +397,9 @@ const DashboardPage: React.FC = () => {
               // Update messages by sender type
               const senderType = newMessage.sender_type || 'unknown'
               const senderLabel = senderType === 'user' ? 'Cliente' :
-                                 senderType === 'human_agent' ? 'Agente' :
-                                 senderType === 'bot' ? 'Bot' :
-                                 senderType === 'ai' ? 'AI Assistant' : 'Sistema'
+                senderType === 'human_agent' ? 'Agente' :
+                  senderType === 'bot' ? 'Bot' :
+                    senderType === 'ai' ? 'AI Assistant' : 'Sistema'
 
               const updatedMessagesBySender = prevStats.messagesBySender.map(sender => {
                 if (sender.name === senderLabel) {
@@ -778,7 +783,7 @@ const DashboardPage: React.FC = () => {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
                       outerRadius={expandedCharts.includes('channels') ? 150 : 80}
                       fill="#8884d8"
                       dataKey="value"

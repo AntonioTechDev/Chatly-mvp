@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { supabase } from '../../lib/supabase'
+import { supabase } from '@/core/lib/supabase'
 
 interface DocumentViewerProps {
   document: {
@@ -110,8 +110,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document, onClose }) =>
       mime_type === 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
     ) {
       const fileTypeLabel = mime_type.includes('word') ? 'Word' :
-                           mime_type.includes('excel') ? 'Excel' :
-                           mime_type.includes('powerpoint') ? 'PowerPoint' : 'Office'
+        mime_type.includes('excel') ? 'Excel' :
+          mime_type.includes('powerpoint') ? 'PowerPoint' : 'Office'
 
       return (
         <div className="flex flex-col items-center justify-center h-full space-y-4 p-6">
