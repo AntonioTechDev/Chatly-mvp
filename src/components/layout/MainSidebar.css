@@ -1,0 +1,162 @@
+/* Main Sidebar Styles */
+
+.main-sidebar {
+    width: 16rem;
+    /* 64 * 0.25rem = 16rem */
+    background-color: white;
+    border-right: 1px solid var(--color-gray-200);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+
+    .header {
+        padding: var(--spacing-4);
+        border-bottom: 1px solid var(--color-gray-200);
+
+        .title {
+            font-size: 1.5rem;
+            /* 2xl */
+            font-weight: 700;
+            color: var(--color-gray-900);
+        }
+
+        .subtitle {
+            font-size: 0.75rem;
+            /* xs */
+            color: var(--color-gray-500);
+            margin-top: 0.25rem;
+        }
+    }
+
+    .navigation {
+        flex: 1;
+        padding-top: var(--spacing-4);
+        padding-bottom: var(--spacing-4);
+
+        .nav-button {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            /* space-x-3 */
+            padding: var(--spacing-3) var(--spacing-4);
+            text-align: left;
+            transition: background-color 0.2s, color 0.2s;
+            border: none;
+            background: none;
+            cursor: pointer;
+            border-right: 4px solid transparent;
+            /* Reserve space for active border */
+
+            .icon {
+                width: 1.5rem;
+                /* w-6 */
+                height: 1.5rem;
+                /* h-6 */
+            }
+
+            .label {
+                font-weight: 500;
+            }
+
+            &.active {
+                background-color: var(--color-primary-50);
+                color: var(--color-primary-700);
+                border-right-color: var(--color-primary-700);
+            }
+
+            &.inactive {
+                color: var(--color-gray-700);
+
+                &:hover {
+                    background-color: var(--color-gray-50);
+                }
+            }
+
+            /* Channel specific styles */
+            &.whatsapp {
+                color: var(--color-whatsapp);
+
+                &:hover {
+                    background-color: rgba(37, 211, 102, 0.1);
+                }
+            }
+
+            &.instagram {
+                color: var(--color-instagram);
+
+                &:hover {
+                    background-color: rgba(228, 64, 95, 0.1);
+                }
+            }
+
+            &.messenger {
+                color: var(--color-messenger);
+
+                &:hover {
+                    background-color: rgba(0, 132, 255, 0.1);
+                }
+            }
+        }
+
+        .divider-container {
+            margin-top: var(--spacing-4);
+            margin-bottom: var(--spacing-4);
+            padding-left: var(--spacing-4);
+            padding-right: var(--spacing-4);
+
+            .divider-line {
+                border-top: 1px solid var(--color-gray-200);
+            }
+
+            .divider-label {
+                font-size: 0.75rem;
+                /* xs */
+                font-weight: 600;
+                color: var(--color-gray-500);
+                margin-top: var(--spacing-4);
+                margin-bottom: var(--spacing-2);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                /* tracking-wider */
+            }
+        }
+    }
+
+    .footer {
+        padding: var(--spacing-4);
+        border-top: 1px solid var(--color-gray-200);
+
+        .logout-button {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            /* space-x-2 */
+            padding: var(--spacing-2) var(--spacing-4);
+            font-size: 0.875rem;
+            /* sm */
+            font-weight: 500;
+            color: var(--color-error-dark);
+            /* red-700 approx */
+            background-color: transparent;
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            transition: background-color 0.2s;
+
+            &:hover {
+                background-color: var(--color-error-light);
+                /* red-50 */
+            }
+
+            .icon {
+                width: 1.25rem;
+                /* w-5 */
+                height: 1.25rem;
+                /* h-5 */
+            }
+        }
+    }
+}

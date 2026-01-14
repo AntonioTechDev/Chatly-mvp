@@ -20,6 +20,8 @@ import LeadDetailsPanel from '../components/layout/LeadDetailsPanel'
 import { useContacts } from '@/core/hooks/useContacts'
 import type { SortField } from '@/core/hooks/useContacts'
 import type { SocialContact } from '@/core/types/database.types'
+import './ContactsPage.css'
+import MenuIcon from '@/img/menu-icon.svg?react'
 
 const ContactsPage: React.FC = () => {
   const navigate = useNavigate()
@@ -91,10 +93,7 @@ const ContactsPage: React.FC = () => {
     return (
       <button
         onClick={() => handleSort(field)}
-        className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${isActive
-            ? 'bg-primary-600 text-white'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
+        className={isActive ? 'active' : 'inactive'}
       >
         {label}
         {arrow}
@@ -107,55 +106,45 @@ const ContactsPage: React.FC = () => {
     searchQuery || startDate || endDate || selectedChannels.length > 0
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="contacts-layout">
       {/* Mobile Hamburger Button */}
       <button
         onClick={() => setIsMobileSidebarOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-primary-600 text-white rounded-md shadow-lg"
+        className="mobile-sidebar-toggle"
       >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 6h16M4 12h16M4 18h16"
-          />
-        </svg>
+        <MenuIcon />
       </button>
 
       {/* Main Sidebar */}
-      <div
-        className={`${isMobileSidebarOpen ? 'block' : 'hidden'
-          } lg:block fixed lg:relative inset-0 lg:inset-auto z-40`}
-      >
+      <div className={`sidebar-wrapper ${isMobileSidebarOpen ? 'mobile-open' : ''}`}>
         {isMobileSidebarOpen && (
           <div
-            className="lg:hidden absolute inset-0 bg-black bg-opacity-50"
+            className="mobile-overlay"
             onClick={() => setIsMobileSidebarOpen(false)}
           />
         )}
-        <div className="relative">
+        <div className="sidebar-container">
           <MainSidebar onChannelSelect={handleChannelSelect} />
         </div>
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto px-4 md:px-8 py-4 md:py-8">
+      <main className="contacts-content">
         {/* Header */}
-        <div className="mb-6 md:mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Contatti</h2>
-          <p className="mt-2 text-sm md:text-base text-gray-600">
+        <div className="page-header">
+          <h2>Contatti</h2>
+          <p>
             Gestisci tutti i tuoi contatti da WhatsApp, Instagram e Messenger
           </p>
         </div>
 
         {/* Filters Section */}
-        <div className="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Filtri</h3>
+        <div className="filter-section">
+          <h3>Filtri</h3>
 
           {/* Search */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="filter-group">
+            <label>
               Ricerca
             </label>
             <SearchBar
@@ -166,45 +155,40 @@ const ContactsPage: React.FC = () => {
           </div>
 
           {/* Date Range */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="date-range-grid">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label>
                 Data Primo Contatto (Da)
               </label>
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => handleDateChange('start', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label>
                 Data Primo Contatto (A)
               </label>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => handleDateChange('end', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
           </div>
 
           {/* Channel Filters */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="filter-group">
+            <label>
               Canali Social
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="channels-toggle">
               {channelOptions.map((channel) => (
                 <button
                   key={channel.value}
                   onClick={() => handleChannelToggle(channel.value)}
-                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${selectedChannels.includes(channel.value)
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
+                  className={selectedChannels.includes(channel.value) ? 'active' : 'inactive'}
                 >
                   {channel.label}
                 </button>
@@ -214,10 +198,9 @@ const ContactsPage: React.FC = () => {
 
           {/* Clear Filters */}
           {hasActiveFilters && (
-            <div className="mt-4">
+            <div className="clear-filters">
               <button
                 onClick={handleClearFilters}
-                className="text-sm text-primary-600 hover:text-primary-700 font-medium"
               >
                 Cancella tutti i filtri
               </button>
@@ -226,11 +209,11 @@ const ContactsPage: React.FC = () => {
         </div>
 
         {/* Sorting and Pagination Controls */}
-        <div className="bg-white rounded-lg shadow p-4 md:p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="controls-section">
+          <div className="controls-header">
             {/* Sort Options */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-gray-700">Ordina per:</span>
+            <div className="sort-options">
+              <span>Ordina per:</span>
               {getSortButton('display_name', 'Nome')}
               {getSortButton('channel', 'Canale')}
               {getSortButton('first_contact', 'Primo Contatto')}
@@ -246,7 +229,7 @@ const ContactsPage: React.FC = () => {
             />
           </div>
 
-          <div className="mt-4 text-sm text-gray-600">
+          <div className="showing-text">
             Mostrando{' '}
             {contacts.length === 0
               ? 0
@@ -259,8 +242,8 @@ const ContactsPage: React.FC = () => {
 
         {/* Contacts List */}
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin h-8 w-8 border-4 border-primary-600 border-t-transparent rounded-full"></div>
+          <div className="loading-container">
+            <div className="spinner"></div>
           </div>
         ) : (
           <>
@@ -273,7 +256,7 @@ const ContactsPage: React.FC = () => {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="mt-6 flex justify-center">
+              <div className="pagination-wrapper">
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}

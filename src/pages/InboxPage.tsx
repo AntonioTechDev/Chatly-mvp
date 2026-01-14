@@ -5,6 +5,11 @@ import ConversationsSidebar from '../components/chat/ConversationsSidebar'
 import ChatArea from '../components/chat/ChatArea'
 import LeadDetailsPanel from '../components/layout/LeadDetailsPanel'
 import type { ConversationWithRelations } from '@/core/types/database.types'
+import './InboxPage.css'
+import MenuIcon from '@/img/menu-icon.svg?react'
+import ChevronLeftIcon from '@/img/chevron-left-icon.svg?react'
+import ChatBubbleIcon from '@/img/chat-bubble-icon.svg?react'
+import EnvelopeIcon from '@/img/envelope-icon.svg?react'
 
 const InboxPage: React.FC = () => {
   const location = useLocation()
@@ -52,78 +57,70 @@ const InboxPage: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="inbox-layout">
       {/* Mobile Hamburger Button - Show only when not in chat view */}
       {mobileView !== 'chat' && (
         <button
           onClick={() => setIsMobileSidebarOpen(true)}
-          className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-primary-600 text-white rounded-md shadow-lg"
+          className="mobile-nav-toggle"
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+          <MenuIcon />
         </button>
       )}
 
-      {/* Main Sidebar - Hidden on mobile, overlay on tablet, fixed on desktop */}
-      <div className={`${isMobileSidebarOpen ? 'block' : 'hidden'} lg:block fixed lg:relative inset-0 lg:inset-auto z-40`}>
+      {/* Main Sidebar */}
+      <div className={`sidebar-wrapper ${isMobileSidebarOpen ? 'mobile-open' : ''}`}>
         {isMobileSidebarOpen && (
           <div
-            className="lg:hidden absolute inset-0 bg-black bg-opacity-50"
+            className="mobile-overlay"
             onClick={() => setIsMobileSidebarOpen(false)}
           />
         )}
-        <div className="relative">
+        <div className="sidebar-container">
           <MainSidebar onChannelSelect={handleChannelSelect} />
         </div>
       </div>
 
-      {/* Mobile: Show based on mobileView state */}
-      {/* Desktop/Tablet: Show as columns */}
-
       {/* Conversations Sidebar */}
-      {selectedChannel && (
-        <div className={`${mobileView === 'conversations' ? 'block' : 'hidden'} lg:block w-full lg:w-96`}>
-          {/* Mobile Back Button */}
-          <div className="lg:hidden bg-white border-b border-gray-200 p-4 flex items-center space-x-3">
-            <button onClick={handleBackToChannels} className="p-1">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-            <h2 className="text-lg font-semibold">Conversazioni</h2>
-          </div>
-          <ConversationsSidebar
-            channel={selectedChannel}
-            selectedConversationId={selectedConversation?.id || null}
-            onSelectConversation={handleSelectConversation}
-          />
-        </div>
-      )}
+      <div className={`conversations-sidebar-wrapper ${selectedChannel ? (mobileView === 'conversations' ? 'mobile-visible' : '') : ''}`}>
+        {selectedChannel && (
+          <>
+            {/* Mobile Back Button */}
+            <div className="mobile-back-header">
+              <button onClick={handleBackToChannels}>
+                <ChevronLeftIcon />
+              </button>
+              <h2>Conversazioni</h2>
+            </div>
+            <ConversationsSidebar
+              channel={selectedChannel}
+              selectedConversationId={selectedConversation?.id || null}
+              onSelectConversation={handleSelectConversation}
+            />
+          </>
+        )}
+      </div>
 
       {/* Chat Area */}
       {selectedConversation ? (
-        <div className={`${mobileView === 'chat' ? 'block' : 'hidden'} lg:flex flex-1 relative`}>
+        <div className={`chat-area-wrapper ${mobileView === 'chat' ? 'mobile-visible' : ''}`}>
           {/* Mobile Navigation Buttons in Chat */}
-          <div className="lg:hidden absolute top-4 left-4 z-10 flex items-center space-x-2">
+          <div className="mobile-chat-nav">
             <button
               onClick={handleBackToConversations}
-              className="p-2 bg-primary-600 text-white rounded-full shadow-lg"
+              className="back-btn"
               title="Torna alle conversazioni"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
+              <ChevronLeftIcon />
             </button>
             <button
               onClick={() => setIsMobileSidebarOpen(true)}
-              className="p-2 bg-white border border-gray-300 rounded-full shadow-lg"
+              className="menu-btn"
               title="Menu"
             >
-              <svg className="w-6 h-6 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <MenuIcon />
             </button>
+
           </div>
 
           <ChatArea
@@ -142,28 +139,25 @@ const InboxPage: React.FC = () => {
           )}
         </div>
       ) : selectedChannel ? (
-        <div className={`${mobileView === 'conversations' ? 'hidden' : 'hidden'} lg:flex flex-1 items-center justify-center bg-gray-50`}>
-          <div className="text-center">
-            <svg className="w-24 h-24 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
+        <div className={`empty-state-container ${mobileView === 'conversations' ? 'hidden' : ''}`}>
+          <div className="content">
+            <ChatBubbleIcon className="icon" />
             <p className="mt-4 text-gray-500">Seleziona una conversazione per iniziare</p>
           </div>
         </div>
       ) : (
-        <div className={`${mobileView === 'channels' ? 'hidden' : 'hidden'} lg:flex flex-1 items-center justify-center bg-gray-50`}>
-          <div className="text-center max-w-md px-4">
-            <svg className="w-24 h-24 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            <h3 className="mt-4 text-lg font-medium text-gray-900">Benvenuto nella tua inbox</h3>
-            <p className="mt-2 text-sm text-gray-500">
+        <div className={`empty-state-container ${mobileView === 'channels' ? 'hidden' : ''}`}>
+          <div className="content">
+            <EnvelopeIcon className="icon" />
+            <h3>Benvenuto nella tua inbox</h3>
+            <p>
               Seleziona un canale dalla sidebar per visualizzare le conversazioni
             </p>
           </div>
         </div>
-      )}
-    </div>
+      )
+      }
+    </div >
   )
 }
 

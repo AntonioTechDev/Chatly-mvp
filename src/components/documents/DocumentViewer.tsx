@@ -10,6 +10,10 @@
 
 import React, { useState, useEffect } from 'react'
 import { supabase } from '@/core/lib/supabase'
+import DocumentTextIcon from '@/img/document-text-icon.svg?react'
+import DownloadIcon from '@/img/download-icon.svg?react'
+import CloseIcon from '@/img/close-icon.svg?react'
+import './DocumentViewer.css'
 
 interface DocumentViewerProps {
   document: {
@@ -65,24 +69,24 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document, onClose }) =>
     getSignedUrl()
   }, [storage_path, drive_file_id, drive_web_view_link])
 
+
+
   // Render content based on mime type
   const renderContent = () => {
     // Loading state
     if (isLoading) {
       return (
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-            <p className="text-gray-600 mt-4">Caricamento documento...</p>
-          </div>
+        <div className="document-viewer-loading">
+          <div className="document-viewer-spinner"></div>
+          <p className="document-viewer-message">Caricamento documento...</p>
         </div>
       )
     }
 
     if (!documentUrl) {
       return (
-        <div className="flex items-center justify-center h-full">
-          <p className="text-gray-500">Impossibile caricare il documento</p>
+        <div className="document-viewer-error">
+          <p className="document-viewer-message">Impossibile caricare il documento</p>
         </div>
       )
     }
@@ -92,15 +96,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document, onClose }) =>
       return (
         <iframe
           src={`${documentUrl}#view=FitH&toolbar=0&navpanes=0`}
-          className="w-full h-full border-0"
+          className="document-viewer-iframe"
           title={file_name}
         />
       )
     }
 
     // Office documents (Word, Excel, PowerPoint)
-    // Note: Cannot use Google Docs Viewer with signed URLs (private files)
-    // Offer download instead
     if (
       mime_type === 'application/msword' ||
       mime_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
@@ -114,25 +116,21 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document, onClose }) =>
           mime_type.includes('powerpoint') ? 'PowerPoint' : 'Office'
 
       return (
-        <div className="flex flex-col items-center justify-center h-full space-y-4 p-6">
-          <svg className="w-16 h-16 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <div className="text-center">
-            <p className="text-gray-700 font-medium text-lg">{file_name}</p>
-            <p className="text-sm text-gray-500 mt-1">Documento {fileTypeLabel}</p>
-            <p className="text-sm text-gray-500 mt-2">
+        <div className="document-viewer-preview-container">
+          <DocumentTextIcon className="document-viewer-preview-icon" />
+          <div className="document-viewer-preview-text-wrapper">
+            <p className="document-viewer-preview-text">{file_name}</p>
+            <p className="document-viewer-preview-subtext">Documento {fileTypeLabel}</p>
+            <p className="document-viewer-preview-smalltext">
               L'anteprima in-browser non è disponibile per i documenti Office.
             </p>
           </div>
           <a
             href={documentUrl}
             download={file_name}
-            className="mt-4 inline-flex items-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-primary-600 hover:bg-primary-700 transition-colors"
+            className="document-viewer-download-btn document-viewer-download-btn--large"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
+            <DownloadIcon className="document-viewer-btn-icon" />
             Scarica documento
           </a>
         </div>
@@ -142,8 +140,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document, onClose }) =>
     // Text files
     if (mime_type === 'text/plain') {
       return (
-        <div className="w-full h-full overflow-auto bg-white p-6">
-          <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800">
+        <div className="document-viewer-text-content">
+          <pre className="document-viewer-pre">
             <TextFileContent url={documentUrl} />
           </pre>
         </div>
@@ -155,7 +153,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document, onClose }) =>
       return (
         <iframe
           src={documentUrl}
-          className="w-full h-full border-0"
+          className="document-viewer-iframe"
           title={file_name}
         />
       )
@@ -163,21 +161,17 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document, onClose }) =>
 
     // Fallback for unsupported types
     return (
-      <div className="flex flex-col items-center justify-center h-full space-y-4">
-        <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <div className="text-center">
-          <p className="text-gray-700 font-medium">Anteprima non disponibile</p>
-          <p className="text-sm text-gray-500 mt-1">Tipo di file: {mime_type}</p>
+      <div className="document-viewer-preview-container">
+        <DocumentTextIcon className="document-viewer-preview-icon document-viewer-preview-icon--gray" />
+        <div className="document-viewer-preview-text-wrapper">
+          <p className="document-viewer-preview-text">Anteprima non disponibile</p>
+          <p className="document-viewer-preview-subtext">Tipo di file: {mime_type}</p>
           <a
             href={documentUrl}
             download={file_name}
-            className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
+            className="document-viewer-download-btn"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-            </svg>
+            <DownloadIcon className="document-viewer-btn-icon" />
             Scarica documento
           </a>
         </div>
@@ -186,35 +180,34 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document, onClose }) =>
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-75 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full h-full max-w-6xl max-h-[90vh] flex flex-col">
+    <div className="document-viewer-overlay">
+      <div className="document-viewer-modal">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-gray-900 truncate" title={file_name}>
+        <div className="document-viewer-header">
+          <div className="document-viewer-title-wrapper">
+            <h2 className="document-viewer-title" title={file_name}>
               {file_name}
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="document-viewer-subtitle">
               Solo lettura
             </p>
           </div>
           <button
             onClick={onClose}
-            className="ml-4 p-2 text-gray-400 hover:text-gray-600 transition-colors"
+            className="document-viewer-close-btn"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <CloseIcon />
           </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-hidden">
+        <div className="document-viewer-content">
           {renderContent()}
         </div>
       </div>
     </div>
   )
+
 }
 
 // Helper component for text files

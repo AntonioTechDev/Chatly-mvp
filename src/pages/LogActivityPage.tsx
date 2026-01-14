@@ -7,152 +7,74 @@ import MainSidebar from '../components/layout/MainSidebar'
 import { supabase } from '@/core/lib/supabase'
 import type { Json, Message } from '@/core/types/database.types'
 import toast from 'react-hot-toast'
+import { fetchActivityLogs, verifyConversationOwnership } from '@/core/services/activityService'
+
+import './LogActivityPage.css'
+import MenuIcon from '@/img/menu-icon.svg?react'
+import InboxIcon from '@/img/inbox-icon.svg?react'
+import ChevronDownIcon from '@/img/chevron-down-icon.svg?react'
 
 const LogActivityPage: React.FC = () => {
   const { user, clientData } = useAuth()
   const navigate = useNavigate()
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [filterChannel, setFilterChannel] = useState<string>('all')
-  const [filterSenderType, setFilterSenderType] = useState<string>('all')
-  const [filterDirection, setFilterDirection] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [filterDirection, setFilterDirection] = useState('all')
+  const [filterSenderType, setFilterSenderType] = useState('all')
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [expandedMessage, setExpandedMessage] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!user || !clientData) {
-      navigate('/login')
-      return
+    if (clientData?.id) {
+      loadMessages()
+
+      // Simple refresh interval instead of complex realtime for now
+      const interval = setInterval(loadMessages, 30000)
+      return () => clearInterval(interval)
     }
+  }, [clientData?.id, filterDirection, filterSenderType])
 
-    fetchMessages()
-    subscribeToMessages()
-  }, [user, clientData, navigate, filterChannel, filterSenderType, filterDirection])
-
-  const fetchMessages = async () => {
+  const loadMessages = async () => {
     if (!clientData?.id) return
-
+    setIsLoading(true)
     try {
-      setIsLoading(true)
-
-      // Get conversations for this client
-      const { data: conversations, error: convError } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('platform_client_id', clientData.id)
-
-      if (convError) throw convError
-
-      const conversationIds = conversations?.map(c => c.id) || []
-
-      if (conversationIds.length === 0) {
-        setMessages([])
-        setIsLoading(false)
-        return
-      }
-
-      // Build query
-      let query = supabase
-        .from('messages')
-        .select('*')
-        .in('conversation_id', conversationIds)
-        .order('created_at', { ascending: false })
-        .limit(100)
-
-      // Apply filters
-      if (filterDirection !== 'all') {
-        query = query.eq('direction', filterDirection)
-      }
-      if (filterSenderType !== 'all') {
-        query = query.eq('sender_type', filterSenderType)
-      }
-
-      const { data: messagesData, error: messagesError } = await query
-
-      if (messagesError) throw messagesError
-
-      setMessages(messagesData || [])
-    } catch (error: any) {
-      console.error('Error fetching messages:', error)
-      toast.error('Errore nel caricamento dei messaggi')
+      const data = await fetchActivityLogs(clientData.id, {
+        channel: 'all', // Not used in UI yet but required by interface
+        direction: filterDirection,
+        senderType: filterSenderType
+      })
+      setMessages(data)
+    } catch (error) {
+      console.error('Error fetching activity logs:', error)
+      toast.error('Errore nel caricamento dei log')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const subscribeToMessages = () => {
-    if (!clientData?.id) return
-
-    const messagesChannel = supabase
-      .channel('log-activity-messages')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-        },
-        async (payload) => {
-          const newMessage = payload.new as Message
-
-          // Verify message belongs to this client's conversations
-          if (!newMessage.conversation_id) return
-
-          const { data: conversation } = await supabase
-            .from('conversations')
-            .select('platform_client_id')
-            .eq('id', newMessage.conversation_id)
-            .single()
-
-          if (conversation?.platform_client_id === clientData.id) {
-            // Check if message matches current filters
-            const matchesFilters =
-              (filterDirection === 'all' || newMessage.direction === filterDirection) &&
-              (filterSenderType === 'all' || newMessage.sender_type === filterSenderType)
-
-            if (matchesFilters) {
-              setMessages(prev => [newMessage, ...prev].slice(0, 100))
-            }
-          }
-        }
-      )
-      .subscribe()
-
-    return () => {
-      messagesChannel.unsubscribe()
-    }
-  }
-
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return 'N/A'
-    return new Date(dateString).toLocaleDateString('it-IT', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    })
-  }
-
-  const getSenderTypeLabel = (senderType: string | null) => {
-    switch (senderType) {
+  const getSenderTypeLabel = (type: string | null) => {
+    switch (type) {
       case 'user': return 'Cliente'
       case 'human_agent': return 'Agente'
       case 'bot': return 'Bot'
-      case 'ai': return 'AI Assistant'
+      case 'ai': return 'AI'
       default: return 'Sistema'
     }
   }
 
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return ''
+    return new Date(dateString).toLocaleString('it-IT')
+  }
+
   const getSenderTypeColor = (senderType: string | null) => {
     switch (senderType) {
-      case 'user': return 'bg-blue-100 text-blue-800'
-      case 'human_agent': return 'bg-green-100 text-green-800'
-      case 'bot': return 'bg-purple-100 text-purple-800'
-      case 'ai': return 'bg-indigo-100 text-indigo-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'user': return 'sender-user'
+      case 'human_agent': return 'sender-agent'
+      case 'bot': return 'sender-bot'
+      case 'ai': return 'sender-ai'
+      default: return 'sender-system'
     }
   }
 
@@ -161,7 +83,7 @@ const LogActivityPage: React.FC = () => {
   }
 
   const getDirectionColor = (direction: string | null) => {
-    return direction === 'incoming' ? 'text-green-600' : 'text-blue-600'
+    return direction === 'incoming' ? 'direction-incoming' : 'direction-outgoing'
   }
 
   // Filter messages by search query
@@ -176,16 +98,16 @@ const LogActivityPage: React.FC = () => {
   })
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* Main Sidebar - Hidden on mobile, overlay on tablet, fixed on desktop */}
-      <div className={`${isMobileSidebarOpen ? 'block' : 'hidden'} lg:block fixed lg:relative inset-0 lg:inset-auto z-40`}>
+    <div className="log-activity-layout">
+      {/* Main Sidebar */}
+      <div className={`sidebar-wrapper ${isMobileSidebarOpen ? 'mobile-open' : ''}`}>
         {isMobileSidebarOpen && (
           <div
-            className="lg:hidden absolute inset-0 bg-black bg-opacity-50"
+            className="mobile-overlay"
             onClick={() => setIsMobileSidebarOpen(false)}
           />
         )}
-        <div className="relative">
+        <div className="sidebar-container">
           <MainSidebar onChannelSelect={(channel) => {
             if (channel) {
               navigate('/inbox', { state: { selectedChannel: channel } })
@@ -194,66 +116,60 @@ const LogActivityPage: React.FC = () => {
         </div>
       </div>
 
-      <main className="flex-1 overflow-y-auto">
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+      <main className="log-main-content">
+        <div className="log-header">
+          <div className="header-container">
+            <div className="title-section">
               <button
                 onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-                className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                className="mobile-menu-btn"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+                <MenuIcon />
               </button>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Log Activity</h1>
-                <p className="text-sm text-gray-600 mt-1">Tutti i messaggi in tempo reale</p>
+              <div className="title-text">
+                <h1>Log Activity</h1>
+                <p>Tutti i messaggi in tempo reale</p>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                </span>
-                <span className="text-sm text-gray-600">Live</span>
-              </div>
+            </div>
+            <div className="live-indicator">
+              <span className="indicator-dot">
+                <span className="ping"></span>
+                <span className="dot"></span>
+              </span>
+              <span>Live</span>
             </div>
           </div>
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <div className="loading-state">
+            <div className="spinner"></div>
           </div>
         ) : (
-          <div className="p-6">
+          <div className="content-check">
             {/* Filters Section */}
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Filtri</h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="filters-section">
+              <h3>Filtri</h3>
+              <div className="filters-grid">
                 {/* Search */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cerca
-                  </label>
+                <div className="filter-group">
+                  <label>Cerca</label>
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Cerca nel testo..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="form-input"
                   />
                 </div>
 
                 {/* Direction Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Direzione
-                  </label>
+                <div className="filter-group">
+                  <label>Direzione</label>
                   <select
                     value={filterDirection}
                     onChange={(e) => setFilterDirection(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="form-select"
                   >
                     <option value="all">Tutti</option>
                     <option value="incoming">Ricevuti</option>
@@ -262,14 +178,12 @@ const LogActivityPage: React.FC = () => {
                 </div>
 
                 {/* Sender Type Filter */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tipo Mittente
-                  </label>
+                <div className="filter-group">
+                  <label>Tipo Mittente</label>
                   <select
                     value={filterSenderType}
                     onChange={(e) => setFilterSenderType(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="form-select"
                   >
                     <option value="all">Tutti</option>
                     <option value="user">Cliente</option>
@@ -280,14 +194,13 @@ const LogActivityPage: React.FC = () => {
                 </div>
 
                 {/* Reset Filters */}
-                <div className="flex items-end">
+                <div className="reset-wrapper">
                   <button
                     onClick={() => {
                       setFilterDirection('all')
                       setFilterSenderType('all')
                       setSearchQuery('')
                     }}
-                    className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
                   >
                     Reset Filtri
                   </button>
@@ -296,65 +209,62 @@ const LogActivityPage: React.FC = () => {
             </div>
 
             {/* Messages Count */}
-            <div className="mb-4 text-sm text-gray-600">
+            <div className="messages-count">
               {filteredMessages.length} messaggi trovati
             </div>
 
             {/* Messages List */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="messages-list-container">
               {filteredMessages.length === 0 ? (
-                <div className="p-12 text-center">
-                  <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                  </svg>
-                  <p className="text-gray-500">Nessun messaggio trovato</p>
+                <div className="empty-state">
+                  <InboxIcon />
+                  <p>Nessun messaggio trovato</p>
                 </div>
               ) : (
-                <div className="divide-y divide-gray-200">
+                <div className="messages-list">
                   {filteredMessages.map((msg) => (
                     <div
                       key={msg.id}
-                      className="p-4 hover:bg-gray-50 transition-colors"
+                      className="message-item"
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
+                      <div className="item-content">
+                        <div className="main-info">
                           {/* Header */}
-                          <div className="flex items-center gap-3 mb-2">
-                            <span className={`px - 2 py - 1 rounded - full text - xs font - medium ${getSenderTypeColor(msg.sender_type)} `}>
+                          <div className="header-badges">
+                            <span className={`badge ${getSenderTypeColor(msg.sender_type)}`}>
                               {getSenderTypeLabel(msg.sender_type)}
                             </span>
-                            <span className={`text - xs font - medium ${getDirectionColor(msg.direction)} `}>
+                            <span className={`badge ${getDirectionColor(msg.direction)}`}>
                               {getDirectionLabel(msg.direction)}
                             </span>
-                            <span className="text-xs text-gray-500">{formatDate(msg.created_at)}</span>
+                            <span className="timestamp">{formatDate(msg.created_at)}</span>
                           </div>
 
                           {/* Message Content */}
-                          <div className={`${expandedMessage === msg.id ? '' : 'line-clamp-2'} `}>
-                            <p className="text-sm text-gray-900">
-                              {msg.content_text || <span className="italic text-gray-500">[Media o contenuto non testuale]</span>}
+                          <div className={`message-text ${expandedMessage === msg.id ? '' : 'collapsed'}`}>
+                            <p>
+                              {msg.content_text || <span className="italic">[Media o contenuto non testuale]</span>}
                             </p>
                           </div>
 
                           {/* Metadata */}
                           {expandedMessage === msg.id && (
-                            <div className="mt-3 pt-3 border-t border-gray-200">
-                              <dl className="grid grid-cols-2 gap-3 text-xs">
+                            <div className="metadata">
+                              <dl>
                                 <div>
-                                  <dt className="font-medium text-gray-500">ID Messaggio</dt>
-                                  <dd className="text-gray-900 mt-1">{msg.id}</dd>
+                                  <dt>ID Messaggio</dt>
+                                  <dd>{msg.id}</dd>
                                 </div>
                                 <div>
-                                  <dt className="font-medium text-gray-500">ID Conversazione</dt>
-                                  <dd className="text-gray-900 mt-1">{msg.conversation_id}</dd>
+                                  <dt>ID Conversazione</dt>
+                                  <dd>{msg.conversation_id}</dd>
                                 </div>
                                 {msg.platform_message_id && (
                                   <div>
-                                    <dt className="font-medium text-gray-500">ID Platform</dt>
-                                    <dd className="text-gray-900 mt-1">{msg.platform_message_id}</dd>
+                                    <dt>ID Platform</dt>
+                                    <dd>{msg.platform_message_id}</dd>
                                   </div>
                                 )}
-
                               </dl>
                             </div>
                           )}
@@ -363,16 +273,9 @@ const LogActivityPage: React.FC = () => {
                         {/* Expand Button */}
                         <button
                           onClick={() => setExpandedMessage(expandedMessage === msg.id ? null : msg.id)}
-                          className="ml-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                          className="expand-btn"
                         >
-                          <svg
-                            className={`w - 5 h - 5 transform transition - transform ${expandedMessage === msg.id ? 'rotate-180' : ''} `}
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                          </svg>
+                          <ChevronDownIcon className={expandedMessage === msg.id ? 'rotated' : ''} />
                         </button>
                       </div>
                     </div>

@@ -1,0 +1,98 @@
+.document-upload {
+    position: relative;
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-8);
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    background-color: var(--color-bg-secondary);
+}
+
+.document-upload:hover {
+    border-color: var(--color-primary-400);
+    background-color: var(--color-bg-hover);
+}
+
+.document-upload--dragging {
+    border-color: var(--color-primary-500);
+    background-color: var(--color-primary-50);
+}
+
+.document-upload--disabled,
+.document-upload--uploading {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.document-upload__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-3);
+}
+
+.document-upload__spinner {
+    width: 3rem;
+    /* 12 */
+    height: 3rem;
+    border-radius: 9999px;
+    border-bottom-width: 2px;
+    border-color: var(--color-primary-600);
+    animation: spin 1s linear infinite;
+}
+
+.document-upload__status-text {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+}
+
+.document-upload__progress-track {
+    width: 100%;
+    max-width: 20rem;
+    /* xs */
+    background-color: var(--color-gray-200);
+    border-radius: 9999px;
+    height: 0.5rem;
+    /* 2 */
+    overflow: hidden;
+}
+
+.document-upload__progress-fill {
+    background-color: var(--color-primary-600);
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 300ms ease;
+}
+
+.document-upload__icon {
+    margin-left: auto;
+    margin-right: auto;
+    height: 3rem;
+    /* 12 */
+    width: 3rem;
+    color: var(--color-text-tertiary);
+}
+
+.document-upload__info {
+    margin-top: var(--spacing-4);
+}
+
+.document-upload__title {
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--color-text-primary);
+}
+
+.document-upload__subtitle {
+    font-size: var(--font-size-xs);
+    color: var(--color-text-tertiary);
+    margin-top: var(--spacing-1);
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

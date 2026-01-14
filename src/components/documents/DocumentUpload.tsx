@@ -10,6 +10,8 @@
 
 import React, { useCallback, useState, useRef } from 'react'
 import toast from 'react-hot-toast'
+import CloudUploadIcon from '@/img/cloud-upload-icon.svg?react'
+import './DocumentUpload.css'
 
 interface DocumentUploadProps {
   onUpload: (file: File, metadata?: any) => Promise<any>
@@ -181,15 +183,8 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`
-        relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
-        transition-all duration-200
-        ${isDragging
-          ? 'border-primary-500 bg-primary-50'
-          : 'border-gray-300 hover:border-primary-400 bg-gray-50 hover:bg-gray-100'
-        }
-        ${disabled || isUploading ? 'opacity-50 cursor-not-allowed' : ''}
-      `}
+      className={`document-upload ${isDragging ? 'document-upload--dragging' : ''} ${disabled || isUploading ? 'document-upload--disabled' : ''
+        }`}
     >
       <input
         ref={fileInputRef}
@@ -201,18 +196,20 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         className="hidden"
       />
 
+
+
       {isUploading ? (
-        <div className="flex flex-col items-center space-y-3">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-          <p className="text-sm text-gray-600">
+        <div className="document-upload__content">
+          <div className="document-upload__spinner"></div>
+          <p className="document-upload__status-text">
             {uploadProgress
               ? `Caricamento ${uploadProgress.current} di ${uploadProgress.total}...`
               : 'Caricamento in corso...'}
           </p>
           {uploadProgress && uploadProgress.total > 1 && (
-            <div className="w-full max-w-xs bg-gray-200 rounded-full h-2">
+            <div className="document-upload__progress-track">
               <div
-                className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                className="document-upload__progress-fill"
                 style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
               ></div>
             </div>
@@ -220,24 +217,12 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         </div>
       ) : (
         <>
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            stroke="currentColor"
-            fill="none"
-            viewBox="0 0 48 48"
-          >
-            <path
-              d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          <div className="mt-4">
-            <p className="text-sm font-medium text-gray-700">
+          <CloudUploadIcon className="document-upload__icon" />
+          <div className="document-upload__info">
+            <p className="document-upload__title">
               {isDragging ? 'Rilascia i file qui' : 'Clicca o trascina i file'}
             </p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="document-upload__subtitle">
               Caricamento multiplo supportato • PDF, Word, Excel, PowerPoint, Testo (max {maxSizeMB}MB per file)
             </p>
           </div>

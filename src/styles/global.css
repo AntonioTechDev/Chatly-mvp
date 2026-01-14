@@ -1,0 +1,87 @@
+@import './variables.css';
+@import './reset.css';
+
+body {
+    font-family: var(--font-sans);
+    background-color: var(--color-gray-50);
+    color: var(--color-gray-900);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+    font-family: var(--font-mono);
+}
+
+/* Global Form Styles */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+input[type="search"],
+select,
+textarea,
+.form-input {
+    appearance: none;
+    background-color: white;
+    border: 1px solid var(--color-gray-300);
+    border-radius: var(--radius-md);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    width: 100%;
+    transition: all 0.2s;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.form-input:focus {
+    outline: none;
+    border-color: var(--color-primary-500);
+    box-shadow: 0 0 0 2px var(--color-primary-100);
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: var(--color-gray-400);
+}
+
+/* Scrollbar Styles */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-gray-300);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-gray-400);
+}
+
+/* App Loading State */
+.app-loading-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-gray-50);
+}
+
+.app-spinner {
+    height: 3rem;
+    /* h-12 */
+    width: 3rem;
+    /* w-12 */
+    border: 2px solid var(--color-primary-600);
+    border-radius: 9999px;
+    border-bottom-color: transparent;
+    animation: spin 1s linear infinite;
+}

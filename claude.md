@@ -22,73 +22,47 @@ Chatly MVP is a multi-channel conversation management platform that unifies cust
 
 ### Layered Architecture Pattern
 
-The codebase follows a strict **layered architecture** with clear separation of concerns:
+The codebase follows a strict **layered architecture** designed for cross-platform scalability:
 
-```
-User Interaction
-    ↓
-Pages (Orchestration layer - combines hooks and components)
-    ↓
-Hooks (Business logic + React state management)
-    ↓
-Services (Pure API calls - no React dependencies)
-    ↓
-Lib (Utilities, Supabase client configuration)
-    ↓
-Supabase (Database, Auth, Storage, Realtime)
-```
+1.  **Core Layer (`src/core`)**: Contains ALL business logic, state management, and API interactions. This layer is platform-agnostic and fully reusable for React Native.
+    *   `services`: Pure API calls.
+    *   `hooks`: State logic.
+    *   `contexts`: Global state.
+    *   `types`: Data definitions.
+2.  **Presentation Layer (`src/components`, `src/pages`)**: Web-specific UI implementation. Orchestrates the Core layer to render HTML/DOM elements.
 
-**Key Principle**: Each layer only communicates with the layer directly below it. Services never import hooks. Hooks never manipulate DOM. Pages orchestrate but don't contain business logic.
+**Key Principle**: The View (Components) is dumb; the Core (Hooks/Services) is smart. To build the mobile app, you only need to rewrite the Presentation Layer (Views), reusing the entire Core Layer.
 
-### Directory Structure
+**Path Aliases**:
+*   `@/*` maps to `src/*`
+*   `@/core/*` maps to `src/core/*` -> ALWAYS use this for importing core logic.
 
-```
 src/
-├── components/          # Presentation components (organized by domain)
-│   ├── ui/             # Generic reusable components (Button, Card, Badge, SearchBar, etc.)
-│   ├── chat/           # Chat-specific components (ConversationCard, MessageCard, ChatArea, etc.)
+├── core/               # SHARED LOGIC (Platform Agnostic - Ready for Mobile)
+│   ├── contexts/       # React Context providers (AuthContext)
+│   ├── hooks/          # Custom hooks with business logic
+│   ├── lib/            # Utilities and configuration (supabase, tokenManager)
+│   ├── services/       # API call services (pure functions)
+│   └── types/          # TypeScript type definitions
+│
+├── components/         # Web-specific presentation components
+│   ├── ui/             # Generic reusable components
+│   ├── chat/           # Chat-specific components
 │   ├── contacts/       # Contact management components
 │   ├── documents/      # Document management components
-│   └── layout/         # Layout components (MainSidebar, ProtectedRoute, LeadDetailsPanel)
+│   └── layout/         # Layout components
 │
-├── contexts/           # React Context providers
-│   └── AuthContext.tsx # Global authentication state (user, session, clientData)
-│
-├── hooks/              # Custom hooks with business logic
-│   ├── useConversations.ts  # Manages conversation fetching, filtering, realtime subscriptions
-│   ├── useMessages.ts       # Manages messages for a conversation
-│   ├── useContacts.ts       # Manages social contacts CRUD operations
-│   └── useDocuments.ts      # Manages document upload/download/delete
-│
-├── lib/                # Utilities and configuration
-│   ├── supabase.ts          # Supabase client singleton instance
-│   ├── security-utils.ts    # Security helpers (escapeRegex, sanitizeHtml, isValidEmail, etc.)
-│   └── tokenManager.ts      # Secure token management via Supabase Vault
-│
-├── services/           # API call services (pure functions, no state)
-│   ├── conversationService.ts  # CRUD and realtime subscriptions for conversations
-│   ├── messageService.ts       # Message fetching, sending, realtime subscriptions
-│   ├── contactService.ts       # Contact CRUD operations
-│   └── supabase/
-│       ├── documentsService.ts # Document metadata operations
-│       └── storageService.ts   # Supabase Storage operations (upload/download/delete files)
-│
-├── pages/              # Route pages (orchestrate hooks and components)
-│   ├── LoginPage.tsx        # Authentication page
-│   ├── DashboardPage.tsx    # Overview dashboard with statistics
-│   ├── InboxPage.tsx        # Multi-channel conversation view (main page)
-│   ├── ContactsPage.tsx     # Contact management
-│   ├── DocumentsPage.tsx    # Document management
-│   ├── UserInfoPage.tsx     # Platform client profile
-│   └── LogActivityPage.tsx  # Activity logs
-│
-├── types/              # TypeScript type definitions
-│   ├── database.types.ts    # Auto-generated from Supabase schema
-│   └── auth.types.ts        # Authentication-related types
+├── pages/              # Route pages (Web orchestration)
+│   ├── LoginPage.tsx
+│   ├── DashboardPage.tsx
+│   ├── InboxPage.tsx
+│   ├── ContactsPage.tsx
+│   ├── DocumentsPage.tsx
+│   ├── UserInfoPage.tsx
+│   └── LogActivityPage.tsx
 │
 ├── App.tsx             # Root component with routing
 └── main.tsx            # Application entry point
-```
 
 ## Database Schema
 
@@ -337,11 +311,11 @@ Outgoing messages from human operators are sent via **n8n webhooks**, not direct
 
 ### State Management
 
-**Global State**: `AuthContext` (src/contexts/AuthContext.tsx)
+**Global State**: `AuthContext` (src/core/contexts/AuthContext.tsx)
 - Manages authentication state: `user`, `session`, `clientData`
 - Provides: `login()`, `logout()`, `refreshClientData()`, `isAuthenticated`, `isLoading`
 - Automatically fetches `platform_clients` data on login/session restore
-- Listens to Supabase auth state changes for session refresh
+- Listeners to Supabase auth state changes for session refresh
 
 **Local State**: React `useState` in hooks for feature-specific data (conversations, messages, contacts, documents).
 
@@ -353,6 +327,8 @@ Outgoing messages from human operators are sent via **n8n webhooks**, not direct
 
 **Naming Convention**: `use[Feature].ts` (e.g., `useConversations`, `useMessages`, `useDocuments`)
 
+**Location**: `src/core/hooks/`
+
 **Structure**:
 - State declarations (data, loading, error)
 - API call functions (using services)
@@ -360,32 +336,19 @@ Outgoing messages from human operators are sent via **n8n webhooks**, not direct
 - Memoized computed values (filters, sorted data)
 - Return object with data and action functions
 
-**Example** (`hooks/useConversations.ts`):
+**Example** (`src/core/hooks/useConversations.ts`):
 ```typescript
 export const useConversations = (channel: 'whatsapp' | 'instagram' | 'messenger') => {
   const { clientData } = useAuth()
-  const [conversations, setConversations] = useState<ConversationWithRelations[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [searchQuery, setSearchQuery] = useState('')
-
-  // Fetch initial data
-  useEffect(() => { /* fetch conversations */ }, [clientData?.id, channel])
-
-  // Subscribe to realtime updates
-  useEffect(() => { /* subscribe to Supabase Realtime */ return () => { /* cleanup */ } }, [channel])
-
-  // Memoized filtering
-  const filteredConversations = useMemo(() => { /* filter logic */ }, [conversations, searchQuery])
-
-  return { conversations: filteredConversations, isLoading, handleSearchChange, refetch, ... }
+// ... implementation
 }
 ```
 
 **Key Hooks**:
-- `useConversations(channel)`: Manages conversations for a specific channel with search/date filters
-- `useMessages(conversationId)`: Manages messages in a conversation with realtime updates
-- `useContacts()`: Manages social contacts CRUD with search/pagination
-- `useDocuments()`: Manages document uploads, downloads, and deletion
+- `useConversations`: Manages conversations for a specific channel
+- `useMessages`: Manages messages in a conversation
+- `useContacts`: Manages social contacts CRUD
+- `useDocuments`: Manages document operations
 
 ### Pages (Orchestration Layer)
 

@@ -1,6 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/core/contexts/AuthContext'
+import SpinnerIcon from '@/img/spinner.svg?react'
+
+import './LoginPage.css'
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -54,20 +57,20 @@ const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-gray-900">Chatly</h1>
-          <p className="mt-2 text-sm text-gray-600">
+    <div className="login-page">
+      <div className="login-container">
+        <div className="login-header">
+          <h1 className="login-title">Chatly</h1>
+          <p className="login-subtitle">
             Accedi al tuo account
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6 bg-white p-8 rounded-lg shadow">
-          <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="login-form">
+          <div className="login-fields">
             {/* Email Field */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <div className="form-group">
+              <label htmlFor="email" className="form-label">
                 Email
               </label>
               <input
@@ -78,22 +81,21 @@ const LoginPage: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className={`mt-1 block w-full px-3 py-2 border ${errors.email ? 'border-red-500' : 'border-gray-300'
-                  } rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500`}
+                className={`form-input ${errors.email ? 'has-error' : ''}`}
                 placeholder="nome@esempio.it"
                 aria-invalid={!!errors.email}
                 aria-describedby={errors.email ? 'email-error' : undefined}
               />
               {errors.email && (
-                <p id="email-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="email-error" className="form-error" role="alert">
                   {errors.email}
                 </p>
               )}
             </div>
 
             {/* Password Field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <div className="form-group">
+              <label htmlFor="password" className="form-label">
                 Password
               </label>
               <input
@@ -104,14 +106,13 @@ const LoginPage: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className={`mt-1 block w-full px-3 py-2 border ${errors.password ? 'border-red-500' : 'border-gray-300'
-                  } rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500`}
+                className={`form-input ${errors.password ? 'has-error' : ''}`}
                 placeholder="Minimo 8 caratteri"
                 aria-invalid={!!errors.password}
                 aria-describedby={errors.password ? 'password-error' : undefined}
               />
               {errors.password && (
-                <p id="password-error" className="mt-1 text-sm text-red-600" role="alert">
+                <p id="password-error" className="form-error" role="alert">
                   {errors.password}
                 </p>
               )}
@@ -121,14 +122,11 @@ const LoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-primary"
           >
             {isSubmitting ? (
-              <span className="flex items-center">
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+              <span className="spinner-wrapper">
+                <SpinnerIcon className="spinner-icon" />
                 Accesso in corso...
               </span>
             ) : (
@@ -137,7 +135,7 @@ const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-600">
+        <p className="login-footer">
           Problemi con l'accesso? Contatta il supporto
         </p>
       </div>

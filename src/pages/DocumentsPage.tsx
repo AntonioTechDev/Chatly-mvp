@@ -12,7 +12,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/core/contexts/AuthContext'
-import { supabase } from '@/core/lib/supabase'
+
 import { toast } from 'react-hot-toast'
 import type { Database } from '@/core/types/database.types'
 import { LayoutList, Search, Upload, FileText, Trash2, Calendar, File, Loader2 } from 'lucide-react'
@@ -26,6 +26,11 @@ import { Pagination } from '../components/ui/Pagination/Pagination'
 import { PageSizeSelector } from '../components/ui/PageSizeSelector/PageSizeSelector'
 import { ViewModeToggle } from '../components/ui/ViewModeToggle/ViewModeToggle'
 import { DocumentsList } from '../components/documents/DocumentsList/DocumentsList'
+import './DocumentsPage.css'
+import MenuIcon from '@/img/menu-icon.svg?react'
+import DownloadIcon from '@/img/download-icon.svg?react'
+import TrashIcon from '@/img/trash-icon.svg?react'
+import FileDocumentIcon from '@/img/file-document-icon.svg?react'
 
 const DocumentsPage: React.FC = () => {
   const { clientData } = useAuth()
@@ -163,29 +168,11 @@ const DocumentsPage: React.FC = () => {
     const docsToDownload = documents.filter(doc => selectedDocuments.has(doc.id))
 
     for (const doc of docsToDownload) {
-      try {
-        const { data, error } = await supabase.storage
-          .from('documents')
-          .download(doc.storage_path)
-
-        if (error) throw error
-
-        const url = URL.createObjectURL(data)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = doc.file_name
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-
-        // Small delay between downloads
-        await new Promise(resolve => setTimeout(resolve, 500))
-      } catch (error) {
-        console.error('Download error for', doc.file_name, error)
-      }
+      await downloadDocument(doc.storage_path, doc.file_name)
+      // Small delay between downloads
+      await new Promise(resolve => setTimeout(resolve, 500))
     }
-  }, [selectedDocuments, documents])
+  }, [selectedDocuments, documents, downloadDocument])
 
   // Dynamic filters based on actual document types
   const filterOptions = useMemo<FilterOption[]>(() => {
@@ -249,44 +236,42 @@ const DocumentsPage: React.FC = () => {
   }, [stats.totalSize])
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="documents-layout">
       {/* Mobile Sidebar Overlay */}
       {isMobileSidebarOpen && (
-        <div className="md:hidden fixed inset-0 z-50">
+        <div className="mobile-sidebar-overlay">
           <div
-            className="absolute inset-0 bg-black bg-opacity-50"
+            className="backdrop"
             onClick={() => setIsMobileSidebarOpen(false)}
           />
-          <div className="relative h-full w-64">
+          <div className="sidebar-container">
             <MainSidebar onChannelSelect={handleChannelSelect} />
           </div>
         </div>
       )}
 
       {/* Sidebar - Desktop */}
-      <div className="hidden md:block">
+      <div className="sidebar-wrapper-desktop">
         <MainSidebar onChannelSelect={handleChannelSelect} />
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="documents-main-content">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 md:space-x-4 flex-1 min-w-0">
+        <header className="documents-header">
+          <div className="header-top">
+            <div className="title-section">
               {/* Mobile menu button */}
               <button
                 onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-                className="md:hidden p-2 rounded-md text-gray-600 hover:bg-gray-100 shrink-0"
+                className="mobile-menu-btn"
               >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+                <MenuIcon />
               </button>
 
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xl md:text-2xl font-bold text-gray-900 truncate">Documenti</h1>
-                <p className="text-xs md:text-sm text-gray-500 mt-1 truncate">
+              <div className="title-info">
+                <h1>Documenti</h1>
+                <p>
                   {clientData?.business_name || 'Gestisci i tuoi documenti'}
                 </p>
               </div>
@@ -294,50 +279,50 @@ const DocumentsPage: React.FC = () => {
           </div>
 
           {/* Stats - Dynamic based on uploaded documents */}
-          <div className="mt-4 grid grid-cols-2 md:grid-cols-5 gap-3">
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500">Totale</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+          <div className="stats-grid">
+            <div className="stat-card gray">
+              <p className="label">Totale</p>
+              <p className="value">{stats.total}</p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-500">Spazio</p>
-              <p className="text-2xl font-bold text-gray-900">{formattedTotalSize}</p>
+            <div className="stat-card gray">
+              <p className="label">Spazio</p>
+              <p className="value">{formattedTotalSize}</p>
             </div>
             {stats.pdfCount > 0 && (
-              <div className="bg-red-50 rounded-lg p-3">
-                <p className="text-xs text-red-600">PDF</p>
-                <p className="text-2xl font-bold text-red-700">{stats.pdfCount}</p>
+              <div className="stat-card red">
+                <p className="label">PDF</p>
+                <p className="value">{stats.pdfCount}</p>
               </div>
             )}
             {stats.wordCount > 0 && (
-              <div className="bg-blue-50 rounded-lg p-3">
-                <p className="text-xs text-blue-600">Word</p>
-                <p className="text-2xl font-bold text-blue-700">{stats.wordCount}</p>
+              <div className="stat-card blue">
+                <p className="label">Word</p>
+                <p className="value">{stats.wordCount}</p>
               </div>
             )}
             {stats.excelCount > 0 && (
-              <div className="bg-green-50 rounded-lg p-3">
-                <p className="text-xs text-green-600">Excel</p>
-                <p className="text-2xl font-bold text-green-700">{stats.excelCount}</p>
+              <div className="stat-card green">
+                <p className="label">Excel</p>
+                <p className="value">{stats.excelCount}</p>
               </div>
             )}
           </div>
         </header>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
+        <div className="documents-content-area">
           {/* Upload Area */}
           <div className="space-y-4">
             <DocumentUpload onUpload={uploadDocument} />
           </div>
 
           {/* Filters */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <div className="flex flex-col space-y-4">
+          <div className="filters-panel">
+            <div className="filters-container">
               {/* Search and View Toggle */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="search-row">
                 {/* Search */}
-                <div className="flex-1">
+                <div className="search-wrapper">
                   <SearchBar
                     value={searchQuery}
                     onChange={setSearchQuery}
@@ -363,25 +348,24 @@ const DocumentsPage: React.FC = () => {
 
           {/* Bulk Actions Bar and Page Size Selector */}
           {filteredDocuments.length > 0 && (
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
-              <div className="flex flex-col gap-4">
+            <div className="bulk-actions-panel">
+              <div className="actions-container">
                 {/* Bulk Actions Row */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="actions-row">
                   {/* Select All */}
-                  <div className="flex items-center space-x-3">
-                    <label className="flex items-center space-x-2 cursor-pointer">
+                  <div className="selection-checkbox">
+                    <label>
                       <input
                         type="checkbox"
                         checked={selectedDocuments.size === filteredDocuments.length && filteredDocuments.length > 0}
                         onChange={handleSelectAll}
-                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                       />
-                      <span className="text-sm font-medium text-gray-700">
+                      <span>
                         Seleziona tutti {filteredDocuments.length > 0 && `(${filteredDocuments.length})`}
                       </span>
                     </label>
                     {selectedDocuments.size > 0 && (
-                      <span className="text-sm text-gray-500">
+                      <span className="selection-count">
                         {selectedDocuments.size} selezionati
                       </span>
                     )}
@@ -389,31 +373,27 @@ const DocumentsPage: React.FC = () => {
 
                   {/* Bulk Actions */}
                   {selectedDocuments.size > 0 && (
-                    <div className="flex items-center space-x-2">
+                    <div className="action-buttons">
                       <button
                         onClick={handleDownloadMultiple}
-                        className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                        className="download-btn"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                        <span className="text-sm font-medium">Scarica</span>
+                        <DownloadIcon />
+                        <span>Scarica</span>
                       </button>
                       <button
                         onClick={handleDeleteMultiple}
-                        className="flex items-center space-x-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                        className="delete-btn"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        <span className="text-sm font-medium">Elimina</span>
+                        <TrashIcon />
+                        <span>Elimina</span>
                       </button>
                     </div>
                   )}
                 </div>
 
                 {/* Page Size Selector Row */}
-                <div className="flex justify-end border-t border-gray-200 pt-4">
+                <div className="pagination-row">
                   <PageSizeSelector
                     value={pageSize}
                     options={[5, 10, 20, 50]}
@@ -427,19 +407,17 @@ const DocumentsPage: React.FC = () => {
 
           {/* Documents Grid/List */}
           {isLoading && documents.length === 0 ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+            <div className="loading-state">
+              <div className="spinner"></div>
             </div>
           ) : error ? (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-              <p className="text-red-600">Errore: {error.message}</p>
+            <div className="error-state">
+              <p>Errore: {error.message}</p>
             </div>
           ) : filteredDocuments.length === 0 ? (
-            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <p className="mt-4 text-gray-600">
+            <div className="empty-state">
+              <FileDocumentIcon />
+              <p>
                 {searchQuery || selectedFilter !== 'all'
                   ? 'Nessun documento trovato'
                   : 'Nessun documento caricato. Carica il tuo primo documento!'
@@ -466,7 +444,7 @@ const DocumentsPage: React.FC = () => {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex justify-center mt-6">
+                <div className="pagination-wrapper">
                   <Pagination
                     currentPage={currentPage}
                     totalPages={totalPages}

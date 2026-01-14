@@ -6,6 +6,8 @@
 
 import React from 'react'
 import './SearchBar.css'
+import SearchIcon from '@/img/search-icon.svg?react'
+import CloseIcon from '@/img/close-icon.svg?react'
 
 interface SearchBarProps {
   value: string
@@ -22,9 +24,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
 }) => {
   return (
     <div className={`search-bar ${className}`}>
-      <svg className="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-      </svg>
+      <SearchIcon className="icon" />
       <input
         type="text"
         value={value}
@@ -38,9 +38,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           className="clear"
           title="Cancella"
         >
-          <svg className="clear-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <CloseIcon className="clear-icon" />
         </button>
       )}
     </div>

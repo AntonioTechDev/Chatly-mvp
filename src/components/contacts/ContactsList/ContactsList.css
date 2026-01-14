@@ -153,3 +153,37 @@
     }
   }
 }
+
+.platform-icon {
+  width: 1rem;
+  height: 1rem;
+
+  &.whatsapp {
+    color: var(--color-whatsapp);
+  }
+
+  &.instagram {
+    color: var(--color-instagram);
+  }
+
+  &.messenger {
+    color: var(--color-messenger);
+  }
+}
+
+.linked-contact-badge {
+  width: 1.5rem;
+  height: 1.5rem;
+  background-color: white;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-gray-200);
+}
+
+.action-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}

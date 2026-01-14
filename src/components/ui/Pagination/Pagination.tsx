@@ -6,6 +6,8 @@
 
 import React from 'react'
 import './Pagination.css'
+import ChevronLeftIcon from '@/img/chevron-left-icon.svg?react'
+import ChevronRightIcon from '@/img/chevron-right-icon.svg?react'
 
 interface PaginationProps {
   currentPage: number
@@ -62,9 +64,7 @@ export const Pagination: React.FC<PaginationProps> = ({
         className="button prev"
         title="Pagina precedente"
       >
-        <svg className="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
+        <ChevronLeftIcon className="icon" />
       </button>
 
       {/* Page Numbers */}
@@ -97,9 +97,7 @@ export const Pagination: React.FC<PaginationProps> = ({
         className="button next"
         title="Pagina successiva"
       >
-        <svg className="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
+        <ChevronRightIcon className="icon" />
       </button>
 
       {/* Info */}

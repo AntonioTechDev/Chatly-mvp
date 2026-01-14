@@ -1,0 +1,208 @@
+/* Inbox Page Layout */
+
+.inbox-layout {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+    background-color: white;
+}
+
+/* Mobile Sidebar Toggle */
+.mobile-nav-toggle {
+    position: fixed;
+    top: 1rem;
+    left: 1rem;
+    z-index: 50;
+    padding: 0.5rem;
+    background-color: var(--color-primary-600);
+    color: white;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    border: none;
+    cursor: pointer;
+
+    @media (min-width: 1024px) {
+        display: none;
+    }
+}
+
+/* Sidebar Wrapper */
+.sidebar-wrapper {
+    display: none;
+    z-index: 40;
+
+    @media (min-width: 1024px) {
+        display: block;
+        position: relative;
+        /* width is handled by the MainSidebar component itself */
+    }
+
+    &.mobile-open {
+        display: block;
+        position: fixed;
+        inset: 0;
+    }
+
+    .mobile-overlay {
+        position: absolute;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: -1;
+
+        @media (min-width: 1024px) {
+            display: none;
+        }
+    }
+
+    .sidebar-container {
+        position: relative;
+        height: 100%;
+    }
+}
+
+/* Conversations Sidebar Container */
+.conversations-sidebar-wrapper {
+    display: none;
+    width: 100%;
+    border-right: 1px solid var(--color-gray-200);
+    background-color: white;
+
+    @media (min-width: 1024px) {
+        display: block;
+        width: 24rem;
+        /* w-96 */
+    }
+
+    &.mobile-visible {
+        display: block;
+    }
+}
+
+/* Mobile Back Button (in Conversations Sidebar) */
+.mobile-back-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    border-bottom: 1px solid var(--color-gray-200);
+    background-color: white;
+
+    @media (min-width: 1024px) {
+        display: none;
+    }
+
+    button {
+        padding: 0.25rem;
+        color: var(--color-gray-600);
+    }
+
+    h2 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--color-gray-900);
+    }
+}
+
+/* Chat Area Container */
+.chat-area-wrapper {
+    display: none;
+    flex: 1;
+    position: relative;
+    flex-direction: column;
+
+    @media (min-width: 1024px) {
+        display: flex;
+    }
+
+    &.mobile-visible {
+        display: flex;
+    }
+
+    /* Mobile In-Chat Navigation */
+    .mobile-chat-nav {
+        position: absolute;
+        top: 1rem;
+        left: 1rem;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        @media (min-width: 1024px) {
+            display: none;
+        }
+
+        .back-btn {
+            padding: 0.5rem;
+            background-color: var(--color-primary-600);
+            color: white;
+            border-radius: 9999px;
+            box-shadow: var(--shadow-lg);
+            border: none;
+
+            svg {
+                width: 1.5rem;
+                height: 1.5rem;
+            }
+        }
+
+        .menu-btn {
+            padding: 0.5rem;
+            background-color: white;
+            border: 1px solid var(--color-gray-300);
+            color: var(--color-gray-700);
+            border-radius: 9999px;
+            box-shadow: var(--shadow-lg);
+
+            svg {
+                width: 1.5rem;
+                height: 1.5rem;
+            }
+        }
+    }
+}
+
+/* Empty State */
+.empty-state-container {
+    display: none;
+    /* Hidden by default on mobile unless specific logic applies, but logic is handled by react classes */
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-gray-50);
+    padding: 1rem;
+
+    @media (min-width: 1024px) {
+        display: flex;
+    }
+
+    &.hidden {
+        display: none;
+    }
+
+    .content {
+        text-align: center;
+        max-width: 28rem;
+        padding: 0 1rem;
+
+        .icon {
+            width: 6rem;
+            height: 6rem;
+            margin: 0 auto;
+            color: var(--color-gray-300);
+        }
+
+        h3 {
+            margin-top: 1rem;
+            font-size: 1.125rem;
+            font-weight: 500;
+            color: var(--color-gray-900);
+        }
+
+        p {
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--color-gray-500);
+        }
+    }
+}

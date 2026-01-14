@@ -1,0 +1,38 @@
+/* ProtectedRoute Styles */
+.protected-route-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-gray-50);
+}
+
+.loading-content {
+    text-align: center;
+}
+
+.loading-spinner {
+    height: 3rem;
+    /* h-12 */
+    width: 3rem;
+    /* w-12 */
+    color: var(--color-primary-600);
+    margin: 0 auto;
+    animation: spin 1s linear infinite;
+}
+
+.loading-text {
+    margin-top: var(--spacing-4);
+    color: var(--color-gray-600);
+    font-size: var(--font-size-base);
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

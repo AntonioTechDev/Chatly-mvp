@@ -16,9 +16,7 @@
     gap: 0.75rem;
   }
 
-  .info {
-    
-  }
+  .info {}
 
   .name {
     font-size: 1rem;
@@ -80,4 +78,33 @@
   .value {
     color: #374151;
   }
+}
+
+.contact-platform-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+
+  &.whatsapp {
+    color: var(--color-whatsapp);
+  }
+
+  &.instagram {
+    color: var(--color-instagram);
+  }
+
+  &.messenger {
+    color: var(--color-messenger);
+  }
+}
+
+.linked-contact-badge-mini {
+  width: 1.5rem;
+  height: 1.5rem;
+  background-color: white;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-gray-200);
 }
