@@ -1,67 +1,55 @@
 # Chatly MVP - LLM Context
 
-## 1. Architecture Overview
-Chatly MVP is a multi-channel conversation management platform (WhatsApp, Instagram, Messenger) utilizing a decoupled architecture.
-- **Frontend**: React 18 SPA (Single Page Application) for UI/UX.
-- **Backend**: NestJS for business logic, API endpoints, and orchestrating services.
-- **Database**: Supabase (PostgreSQL) for persistence, authentication, real-time subscriptions, and vector embeddings.
-- **Data Pipeline**: n8n for initial data collection loops (gradually interacting with Backend).
-- **Security**: Hard delete policy, Encrypted tokens (Supabase Vault), RLS (Row Level Security) enabled on all tables.
+## 1. Project Overview
+**Chatly MVP** is a multi-channel conversation management platform (WhatsApp, Instagram, Messenger) utilizing a decoupled architecture.
+- **Value Proposition**: Unified inbox for business operators to manage social conversations without channel switching.
+- **Status**: MVP Phase (Refactoring & Optimization).
 
-## 2. Tech Stack
-- **Languages**: TypeScript (Strict mode)
-- **Frontend**: React 18, Vite, Tailwind CSS, React Router, Lucide React (Icons).
-- **Backend**: NestJS (Modules, Controllers, Services, DTOs, Guards), Supabase Client.
-- **Database**: PostgreSQL (Supabase), pgvector (Embeddings), pgcrypto, Supabase Vault.
-- **AI/RAG**: OpenAI Embeddings (text-embedding-ada-002), pgvector for semantic search.
+## 2. Architecture
+### Hybrid Architecture
+- **Frontend (React 18 + Vite)**: Handles UI/UX, direct read-access to Supabase.
+- **Backend (NestJS)**: Secure operations, API token management (Meta), Notifications (OTP), Webhook Proxy.
+- **Database (Supabase)**: Source of Truth. PostgreSQL 15, Auth, Realtime, Vault (Secrets), Vector Embeddings.
+- **Automation (n8n)**: Complex workflows and message orchestration.
 
-## 3. Project Structure
+### Folder Structure
 ```
-/
-├── backend/                 # NestJS Application
-│   ├── src/
-│   │   ├── common/          # Shared guards, interfaces, decorators
-│   │   ├── modules/         # Feature modules (Auth, Onboarding, Notifications)
-│   │   └── database/        # Migrations and SQL scripts
+Chatly-mvp/
+├── backend/            # NestJS Application (Business Logic, Secure Ops)
+│   ├── src/modules/    # Feature Modules (Auth, Onboarding, Notifications)
+│   ├── .env            # Backend Env
 │   └── package.json
-│
-├── frontend/                # React Application
-│   ├── src/
-│   │   ├── components/      # Reusable UI components
-│   │   ├── pages/           # Route views
-│   │   ├── hooks/           # Custom React hooks
-│   │   └── core/            # API clients, contexts, constants
+├── frontend/           # React Application (UI, Client Logic)
+│   ├── src/core/       # Shared Logic (Hooks, Contexts, Services)
+│   ├── src/components/ # UI Components
 │   └── package.json
-│
-├── docs/                    # [DEPRECATED -> see llm.md]
-├── .gitignore               # Standard gitignore
-└── llm.md                   # This file (Single Source of Truth)
+├── supabase/           # Database Resources
+│   ├── migrations/     # SQL Migrations
+│   └── SCHEMA.md       # Full Database Schema Documentation
+├── .gitignore          # Git Ignore Rules
+├── llm.md              # Context File (This file)
+└── README.md           # Project Entry Point
 ```
+
+## 3. Tech Stack
+- **Languages**: TypeScript (Strict), SQL.
+- **Frontend**: React 18, Tailwind CSS 3.4, Lucide React, Axios.
+- **Backend**: NestJS 11, Class-Validator, Twilio SDK (via Wrapper).
+- **Database**: PostgreSQL 15 (Supabase), pgvector (Embeddings), pgcrypto, Supabase Vault.
 
 ## 4. Key Conventions
-- **Code Style**:
-  - Use `kebab-case` for filenames.
-  - Use `PascalCase` for Classes/Components.
-  - Use `camelCase` for variables/functions.
-  - Strict TypeScript types (avoid `any`).
-- **Backend**:
-  - Modular architecture (Feature-based).
-  - Controller-Service-Repository pattern (using Supabase as Repo layer often).
-  - Validation via DTOs (`class-validator`).
-- **Database**:
-  - **RLS**: Mandatory for all tables.
-  - **Vector Search**: Use `vector` extension with HNSW indices.
-  - **Secrets**: Never store tokens in plain text; use Supabase Vault.
-  - **IDs**: Use UUIDs or BigInts (consistent usage required).
+- **Naming**: `kebab-case` for files/folders, `PascalCase` for Classes/Components, `camelCase` for vars.
+- **Security**: 
+  - **Hard Delete**: All deletes are permanent.
+  - **Secrets**: Stored in **Supabase Vault**, referenced by UUID in tables (e.g., `platform_clients`).
+  - **RLS**: Mandatory Row Level Security on all tables.
+- **Onboarding**: Flows managed via Backend stats (proposed) + Frontend Wizard.
 
-## 5. Database Schema Highlights
-- **`platform_clients`**: Business entities (Tenants). Holds encrypted tokens/secrets references.
-- **`social_contacts`**: End-users/Leads from social platforms.
-- **`conversations`** & **`messages`**: Core chat data.
-- **`documents`**: AI knowledge base with vector embeddings.
-- **`profiles`**: Application users (mapped to `auth.users`).
+## 5. Implementation Guidelines
+- **API First**: Complex logic moves to Backend modules. Frontend consumes Backend APIs for write ops/sensitive tasks.
+- **Notification Strategy**: Provider-agnostic (Twilio/Mock) implementation in Backend.
+- **Meta Integration**: System User tokens stored securely; Webhooks proxied through Backend.
 
-## 6. Security Rules
-- **Hard Delete**: Deleted records are permanently removed.
-- **Token Storage**: Use `vault.secrets`. Store reference UUID in `platform_clients`.
-- **Storage Paths**: `{user_id}/{category}/{timestamp}_{filename}`.
+## 6. Resources
+- **Schema**: See `supabase/SCHEMA.md`.
+- **Migrations**: See `supabase/migrations/`.

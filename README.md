@@ -1,34 +1,38 @@
 # Chatly MVP
 
-**Multi-channel Conversation Management Platform** (WhatsApp, Instagram, Messenger).
+**Unified Inbox for Multi-Channel Social Conversations**
 
-## 🚀 Overview
-Chatly integrates social messaging channels into a unified interface for businesses. It leverages **Supabase** for real-time data and **NestJS** for robust backend logic.
+Chatly centralizes WhatsApp, Instagram, and Messenger interactions into a single, real-time dashboard for business efficiency.
 
-## 🛠️ Tech Stack
-- **Frontend**: React 18, Tailwind CSS, Vite
-- **Backend**: NestJS, TypeScript
-- **Database**: PostgreSQL (Supabase), pgvector (AI/RAG)
-- **Infrastructure**: Supabase (Auth, Storage, Edge Functions)
+## 🚀 Technology Stack
 
-## 📂 Structure
-- `backend/` - NestJS API and Services
-- `frontend/` - React Application
-- `llm.md` - **Architecture & Context Single Source of Truth**
+- **Frontend**: React 18, Vite, Tailwind CSS
+- **Backend**: NestJS (API, Security, Notifications)
+- **Database**: Supabase (PostgreSQL, Vector Embeddings)
+- **Automation**: n8n
 
-## 🏁 Getting Started
-1. **Backend**:
-   ```bash
-   cd backend
-   npm install
-   npm run start:dev
-   ```
-2. **Frontend**:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
+## 📂 Project Structure
 
-## 📖 Documentation
-See [llm.md](./llm.md) for detailed architecture, coding conventions, and schema info.
+| Directory | Description |
+|-----------|-------------|
+| `/backend` | NestJS Application source code |
+| `/frontend` | React Application source code |
+| `/supabase` | Database migrations and schema documentation |
+| `llm.md` | Context file for AI integration and architecture |
+
+## 🛠 Getting Started
+
+1. **Frontend**: `cd frontend && npm install && npm run dev`
+2. **Backend**: `cd backend && npm install && npm run start:dev`
+3. **Env**: Copy `.env.example` to `.env` in both directories.
+
+## 📄 Documentation
+
+- **Database Schema**: [supabase/SCHEMA.md](./supabase/SCHEMA.md)
+- **AI Context & Guidelines**: [llm.md](./llm.md)
+
+## 🔒 Security
+
+- **Tokens**: Stored in Supabase Vault (encrypted).
+- **Data**: Hard delete policy active.
+- **Access**: Row Level Security (RLS) enabled on all tables.
