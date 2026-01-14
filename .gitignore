@@ -1,9 +1,42 @@
-# .gitignore
-.mcp.json
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Testing
+coverage
+
+# Production
+build
+dist
+
+
+
+# Misc
+.DS_Store
 .env
 .env.local
-.env.production
-node_modules
-.vite
-dist
-.vercel
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDEs
+.idea
+.vscode
+*.swp
+*.swo
+
+# Supabase
+supabase/functions/**/.env
+
+# OS
+Thumbs.db
+
+# Chatly Specific
+claude.md
+gemini.md
+context_handover.md
