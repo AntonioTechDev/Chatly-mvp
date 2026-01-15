@@ -39,26 +39,49 @@ Chatly-mvp/
 
 ## 4. Key Conventions
 - **Naming**: `kebab-case` for files/folders, `PascalCase` for Classes/Components, `camelCase` for vars.
-- **Security**: 
+- **Security**:
   - **Hard Delete**: All deletes are permanent.
   - **Secrets**: Stored in **Supabase Vault**, referenced by UUID in tables (e.g., `platform_clients`).
   - **RLS**: Mandatory Row Level Security on all tables.
-- **Onboarding**: Flows managed via Backend stats (proposed) + Frontend Wizard.
+- **Onboarding**: 7-step wizard. Steps 1-2 unauthenticated (signup/OTP), Steps 3-7 authenticated (business data).
 
-## 5. Implementation Guidelines
+## 5. Authentication Architecture
+### Database
+- **Trigger**: `on_auth_user_created` auto-creates `profiles` record on user signup
+- **Tables**: `auth.users` (Supabase Auth) → `profiles` → `platform_clients`
+- **RLS**: Active on `profiles` and `platform_clients`
+- **Migration**: `supabase/migrations/20260115_fix_authentication_architecture.sql`
+
+### Backend (NestJS)
+- **Public endpoints** (no JWT): `POST /onboarding/step-1`, `POST /onboarding/step-2/verify-otp`
+- **Protected endpoints** (require JWT): `POST /onboarding/step-3` to `step-7`, all other routes
+- **Decorator**: `@Public()` marks routes as unauthenticated
+- **Guard**: `SupabaseAuthGuard` checks for `@Public()` metadata
+
+### Frontend (React)
+- **Routes**:
+  - `/register` → redirects to `/onboarding/step-1`
+  - `/onboarding/step-1` → Email/password signup (public)
+  - `/onboarding/step-2` → OTP verification (public)
+  - `/onboarding/step-3` to `/step-7` → Business data (protected)
+  - `/auth/callback` → Google OAuth callback handler
+- **Flows**:
+  - Email: Step 1 (signup) → auto-redirect Step 2 (OTP) → auto-redirect Step 3
+  - Google OAuth: Login → `/auth/callback` → Step 3 (new user) or smart resume
+  - Login: Check DB onboarding_step → redirect to current step or dashboard
+- **CSS**: `Wizard.css` imported globally in `main.tsx`
+
+## 6. Implementation Guidelines
 - **API First**: Complex logic moves to Backend modules. Frontend consumes Backend APIs for write ops/sensitive tasks.
 - **Notification Strategy**: Provider-agnostic (Twilio/Mock) implementation in Backend.
 - **Meta Integration**: System User tokens stored securely; Webhooks proxied through Backend.
 
-## 6. Resources
-- **Schema**: See `supabase/SCHEMA.md`.
-- **Migrations**: See `supabase/migrations/`.
+## 7. Deployment
+1. Apply migration: `supabase/migrations/20260115_fix_authentication_architecture.sql` in Supabase SQL Editor
+2. Update Supabase OAuth redirect URLs to `/auth/callback` (not `/`)
+3. Build: `npm run build` in backend and frontend directories
 
-## 7. Recent Implementations (Auth & Onboarding)
-- **Google OAuth**: Integrated via Supabase Auth (`authService.signInWithGoogle`). Uses custom `AuthContext` to sync profile data.
-- **Smart Resume Flow**: 
-  - **Routing**: Deep-linked wizard steps (`/onboarding/step-:step`).
-  - **Logic**: `RootRedirect` checks `public.profiles` / `platform_clients` to redirect New Users to Wizard and Completed Users to Dashboard.
-  - **Persistence**: Wizard data saved incrementally to Backend (`ONBOARDING_STEP` update) on each "Continue" action.
-- **Password Recovery**: Full flow implemented (`/forgot-password`, `/update-password`).
+## 8. Resources
+- **Schema**: `supabase/SCHEMA.md`
+- **Migrations**: `supabase/migrations/`
 - **UI/UX**: Standardized `Button` component with `isLoading` state; removed "Back" button for authenticated users in Step 3.

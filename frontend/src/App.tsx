@@ -108,13 +108,8 @@ function App() {
             <Route path="/auth/callback" element={<AuthCallback />} />
 
 
-            {/* Wizard Routes - Wrapped in Layout to persist state */}
-            {/* Wizard Routes - Explicitly wrapped to ensure correct matching and persistence */}
-            <Route path="/register" element={
-              <WizardLayout>
-                <WizardContainer />
-              </WizardLayout>
-            } />
+            {/* Wizard Routes - Redirect /register to step 1 */}
+            <Route path="/register" element={<Navigate to="/onboarding/step-1" replace />} />
             <Route path="/onboarding/step-:step" element={
               <WizardLayout>
                 <WizardContainer />
