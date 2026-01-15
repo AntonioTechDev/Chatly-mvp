@@ -11,6 +11,7 @@ export interface AuthState {
   user: User | null
   session: Session | null
   clientData: PlatformClient | null
+  profile: any | null // Simplified type for now, or import Profile from database.types
   isLoading: boolean
   isAuthenticated: boolean
 }

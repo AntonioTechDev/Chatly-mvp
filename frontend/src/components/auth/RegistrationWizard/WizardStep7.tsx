@@ -1,31 +1,37 @@
 import React, { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/Button/Button'
 import { useWizard } from './WizardContext'
+import { authWizardService } from '@/core/services/authWizardService'
 import toast from 'react-hot-toast'
-import './Wizard.css'
 
 export const WizardStep7: React.FC = () => {
     const { nextStep, prevStep, data, goToDashboard, isLoading } = useWizard()
-    const [code, setCode] = useState<string[]>(new Array(6).fill(''))
+    const [code, setCode] = useState<string[]>(new Array(8).fill(''))
     const [isVerifying, setIsVerifying] = useState(false)
 
-    // MOCK: Show SMS code
+    // Auto-send SMS on mount
     useEffect(() => {
-        const timer = setTimeout(() => {
-            // In production this would come from an SMS provider
-            toast('Il tuo codice SMS è: 987654', {
-                icon: '📱',
-                duration: 6000
-            })
-        }, 1000)
-        return () => clearTimeout(timer)
-    }, [])
+        const sendSms = async () => {
+            if (data.phoneNumber) {
+                try {
+                    await authWizardService.sendPhoneOtp(data.phoneNumber)
+                    toast.success('Codice SMS inviato!')
+                } catch (e: any) {
+                    console.error(e)
+                    toast.error('Errore invio SMS: ' + e.message)
+                }
+            }
+        }
+        sendSms()
+    }, [data.phoneNumber])
 
     const handleChange = (element: HTMLInputElement, index: number) => {
         if (isNaN(Number(element.value))) return false
         const newCode = [...code]
         newCode[index] = element.value
         setCode(newCode)
-        if (element.value !== '' && index < 5) {
+        // Focus next input
+        if (element.value !== '' && index < 7) {
             const nextInput = document.getElementById(`sms-${index + 1}`)
             if (nextInput) nextInput.focus()
         }
@@ -47,20 +53,22 @@ export const WizardStep7: React.FC = () => {
 
     const handleVerify = async () => {
         const pin = code.join('')
-        if (pin.length !== 6) return
-
-        if (pin !== '987654') {
-            toast.error('Codice non valido')
-            return
-        }
+        if (pin.length !== 8) return
 
         setIsVerifying(true)
-        // Simulate verification and final submission
-        setTimeout(async () => {
-            setIsVerifying(false)
-            // Finalize wizard
+        try {
+            await authWizardService.verifyPhoneOtp(data.phoneNumber || '', pin)
+            toast.success('Numero verificato!')
+
+            // Finalize wizard on backend
+            await authWizardService.completeOnboarding();
+
             goToDashboard()
-        }, 1500)
+        } catch (error: any) {
+            console.error(error)
+            toast.error(error.message || 'Codice non valido')
+            setIsVerifying(false)
+        }
     }
 
     const isComplete = code.every(digit => digit !== '')
@@ -79,7 +87,7 @@ export const WizardStep7: React.FC = () => {
             </div>
 
             <div className="wizard-form">
-                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'center', marginBottom: '1rem', flexWrap: 'nowrap' }}>
                     {code.map((digit, index) => (
                         <input
                             key={index}
@@ -88,10 +96,10 @@ export const WizardStep7: React.FC = () => {
                             maxLength={1}
                             className="form-input-auth"
                             style={{
-                                width: '3rem',
-                                height: '3rem',
+                                width: '2.5rem',
+                                height: '2.5rem',
                                 textAlign: 'center',
-                                fontSize: '1.5rem',
+                                fontSize: '1.25rem',
                                 padding: 0
                             }}
                             value={digit}
@@ -102,17 +110,19 @@ export const WizardStep7: React.FC = () => {
                 </div>
 
                 <div className="wizard-actions">
-                    <button className="wizard-btn-secondary" onClick={prevStep}>
+                    <Button variant="secondary" className="wizard-btn-secondary" onClick={prevStep}>
                         Indietro
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="primary"
                         className="wizard-btn-primary"
-                        style={{ flex: 2 }}
+                        style={{ flex: 2, justifyContent: 'center' }}
                         onClick={handleVerify}
-                        disabled={!isComplete || isVerifying || isLoading}
+                        disabled={!isComplete || isVerifying}
+                        isLoading={isVerifying || isLoading}
                     >
-                        {isVerifying ? 'Verifica...' : 'Completa registrazione'}
-                    </button>
+                        Completa registrazione
+                    </Button>
                 </div>
             </div>
         </div>

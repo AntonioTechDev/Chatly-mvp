@@ -7,6 +7,8 @@ import GoogleIcon from '@/img/google-icon.svg?react'
 import EyeIcon from '@/img/eye-icon.svg?react'
 import EyeOffIcon from '@/img/eye-off-icon.svg?react'
 
+import { authService } from '@/core/services/authService' // Fix: Missing import
+
 import './LoginPage.css'
 
 const LoginPage: React.FC = () => {
@@ -61,9 +63,14 @@ const LoginPage: React.FC = () => {
     }
   }
 
-  const handleGoogleLogin = () => {
-    // Placeholder for Google Auth
-    console.log('Google login clicked')
+  const handleGoogleLogin = async () => {
+    try {
+      await authService.signInWithGoogle()
+    } catch (error) {
+      console.error('Google login failed:', error)
+      // toast handled in service or here? service throws, so here.
+      // But authService.signInWithGoogle redirects, so normally we don't catch unless immediate error.
+    }
   }
 
   return (
@@ -130,9 +137,9 @@ const LoginPage: React.FC = () => {
               {errors.password && <p className="form-error">{errors.password}</p>}
             </div>
 
-            <button type="button" className="forgot-password-link">
+            <Link to="/forgot-password" className="forgot-password-link" style={{ display: 'inline-block', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'right', width: '100%', textDecoration: 'none' }}>
               Password dimenticata?
-            </button>
+            </Link>
 
             <button
               type="submit"

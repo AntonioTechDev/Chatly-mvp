@@ -6,7 +6,7 @@ export class Step5Dto {
     @IsOptional()
     usageGoals: string[];
 
-    @IsArray()
     @IsOptional()
-    dataStorage: string[];
+    // It can be a string now
+    dataStorage: string; // no @IsArray
 }

@@ -1,32 +1,65 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Button } from '@/components/ui/Button/Button'
+import { Link, useNavigate } from 'react-router-dom'
 import { useWizard } from './WizardContext'
+import { authWizardService } from '@/core/services/authWizardService'
+import toast from 'react-hot-toast'
+import GoogleIcon from '@/img/google-icon.svg?react'
 import EyeIcon from '@/img/eye-icon.svg?react'
 import EyeOffIcon from '@/img/eye-off-icon.svg?react'
-import './Wizard.css' // Import CSS
+import { authService } from '@/core/services/authService'
 
 export const WizardStep1: React.FC = () => {
-    const { data, updateData, nextStep, isLoading } = useWizard()
+    const { data, updateData, isLoading } = useWizard()
+    const navigate = useNavigate()
     const [password, setPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [termsAccepted, setTermsAccepted] = useState(false)
-
-    // We keep local state for passwords as they are sensitive and explicitly handled
-    // Data.email etc comes from context
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     const handleContinue = async () => {
-        // Basic validation
         if (!data.email || !password || !confirmPassword || !termsAccepted) return
         if (password !== confirmPassword) {
-            alert("Le password non coincidono") // Better: use toast or local error state
+            toast.error("Le password non coincidono")
             return
         }
 
-        // Here we would create the user in Supabase in a real flow
-        // For now we simulate or call a create user function
-        // Then call nextStep()
-        await nextStep()
+        setIsSubmitting(true)
+        try {
+            const result = await authWizardService.signUp(data.email, password)
+
+            // Account successfully created - DO NOT show success message
+            // Immediately redirect to Step 2 for email verification
+            if (result.user?.id) {
+                navigate('/onboarding/step-2', {
+                    replace: true,
+                    state: {
+                        email: data.email,
+                        userId: result.user.id
+                    }
+                })
+            }
+        } catch (error: any) {
+            console.error(error)
+            // Supabase API returns 400 or 422 for existing user
+            // Message usually contains "User already registered" or similar
+            if (error.message?.includes('registered') || error.status === 400 || error.status === 422) {
+                toast.error("Utente già registrato. Prova ad accedere.", { duration: 5000 })
+            } else {
+                toast.error(error.message || "Errore durante la registrazione")
+            }
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
+    const handleGoogleLogin = async () => {
+        try {
+            await authService.signInWithGoogle()
+        } catch (error) {
+            console.error(error)
+        }
     }
 
     return (
@@ -35,6 +68,22 @@ export const WizardStep1: React.FC = () => {
                 <span className="step-indicator">Passaggio 1 di 7</span>
                 <h2 className="step-title">Crea il tuo account Chatly</h2>
                 <p className="step-description">Prova gratuita di 14 giorni, senza carta di credito</p>
+
+                <Button
+                    variant="secondary"
+                    className="google-btn"
+                    onClick={handleGoogleLogin}
+                    style={{ width: '100%', marginTop: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}
+                >
+                    <div className="icon-size-5"><GoogleIcon /></div>
+                    <span>Registrati con Google</span>
+                </Button>
+
+                <div className="auth-separator" style={{ margin: '1.5rem 0' }}>
+                    <div className="separator-line" />
+                    <span className="separator-text">oppure</span>
+                    <div className="separator-line" />
+                </div>
             </div>
 
             <div className="wizard-form">
@@ -49,7 +98,6 @@ export const WizardStep1: React.FC = () => {
                             onChange={(e) => updateData({ email: e.target.value })}
                             required
                         />
-                        {/* Check icon if valid logic here */}
                     </div>
                 </div>
 
@@ -72,7 +120,6 @@ export const WizardStep1: React.FC = () => {
                             <div className="icon-size-5">{showPassword ? <EyeOffIcon /> : <EyeIcon />}</div>
                         </button>
                     </div>
-                    {/* Password strength meter would go here */}
                     <p className="register-subtext" style={{ fontSize: '0.7rem' }}>Minimo 8 caratteri, 1 maiuscola, 1 numero.</p>
                 </div>
 
@@ -93,7 +140,7 @@ export const WizardStep1: React.FC = () => {
                         type="checkbox"
                         checked={termsAccepted}
                         onChange={(e) => setTermsAccepted(e.target.checked)}
-                        className="terms-checkbox" // Style this
+                        className="terms-checkbox"
                         style={{ width: 'auto' }}
                     />
                     <label className="step-description" style={{ margin: 0 }}>
@@ -101,14 +148,16 @@ export const WizardStep1: React.FC = () => {
                     </label>
                 </div>
 
-                <button
+                <Button
+                    variant="primary"
                     className="wizard-btn-primary"
                     onClick={handleContinue}
-                    disabled={!termsAccepted || !data.email || !password || isLoading}
+                    disabled={!termsAccepted || !data.email || !password}
+                    isLoading={isSubmitting}
+                    style={{ justifyContent: 'center' }}
                 >
-                    {isLoading ? 'Attendi...' : 'Continua'}
-                    {/* Arrow Icon */}
-                </button>
+                    Continua
+                </Button>
             </div>
 
             <div className="wizard-footer">

@@ -25,17 +25,13 @@ export interface WizardData {
 
     // Step 5: Usage & Goals
     usageGoals: string[] // Multi-select
-    dataStorage: string[] // Multi-select "Hubspot", "Salesforce", etc.
+    dataStorage: string // Radio selection "Hubspot", "Salesforce", etc. (Single)
 
     // Step 6: Profile
     role: string
     phoneNumber: string
 
-    // Step 7: Phone Verification
-    phoneVerified: boolean
-
-    // Meta
-    completedAt?: string
+    // ...
 }
 
 export const INITIAL_WIZARD_DATA: WizardData = {
@@ -46,7 +42,7 @@ export const INITIAL_WIZARD_DATA: WizardData = {
     customerType: '',
     acquisitionChannels: [],
     usageGoals: [],
-    dataStorage: [],
+    dataStorage: '',
     role: '',
     phoneNumber: '',
     phoneVerified: false

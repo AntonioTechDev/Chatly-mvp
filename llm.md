@@ -53,3 +53,12 @@ Chatly-mvp/
 ## 6. Resources
 - **Schema**: See `supabase/SCHEMA.md`.
 - **Migrations**: See `supabase/migrations/`.
+
+## 7. Recent Implementations (Auth & Onboarding)
+- **Google OAuth**: Integrated via Supabase Auth (`authService.signInWithGoogle`). Uses custom `AuthContext` to sync profile data.
+- **Smart Resume Flow**: 
+  - **Routing**: Deep-linked wizard steps (`/onboarding/step-:step`).
+  - **Logic**: `RootRedirect` checks `public.profiles` / `platform_clients` to redirect New Users to Wizard and Completed Users to Dashboard.
+  - **Persistence**: Wizard data saved incrementally to Backend (`ONBOARDING_STEP` update) on each "Continue" action.
+- **Password Recovery**: Full flow implemented (`/forgot-password`, `/update-password`).
+- **UI/UX**: Standardized `Button` component with `isLoading` state; removed "Back" button for authenticated users in Step 3.

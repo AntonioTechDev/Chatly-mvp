@@ -1,6 +1,6 @@
 import React from 'react'
+import { Button } from '@/components/ui/Button/Button'
 import { useWizard } from './WizardContext'
-import './Wizard.css'
 
 export const WizardStep5: React.FC = () => {
     const { nextStep, prevStep, data, updateData, isLoading } = useWizard()
@@ -14,11 +14,8 @@ export const WizardStep5: React.FC = () => {
     }
 
     const toggleStorage = (storage: string) => {
-        const current = data.dataStorage || []
-        const updated = current.includes(storage)
-            ? current.filter(s => s !== storage)
-            : [...current, storage]
-        updateData({ dataStorage: updated })
+        // Single select (Radio behavior)
+        updateData({ dataStorage: storage })
     }
 
     const handleContinue = async () => {
@@ -59,31 +56,34 @@ export const WizardStep5: React.FC = () => {
 
                 <div className="form-group-auth">
                     <label className="form-label-auth">Dove salvi i dati dei clienti?</label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         {['CRM (HubSpot, Salesforce...)', 'Google Sheets/Excel', 'Gestionale interno', 'Non ho un sistema'].map(storage => (
                             <button
                                 key={storage}
-                                className={`option-pill ${data.dataStorage?.includes(storage) ? 'selected' : ''}`}
+                                className={`check-card ${data.dataStorage === storage ? 'selected' : ''}`}
                                 onClick={() => toggleStorage(storage)}
                             >
-                                {storage}
+                                <div className={`radio-circle ${data.dataStorage === storage ? 'checked' : ''}`} />
+                                <span className="option-text">{storage}</span>
                             </button>
                         ))}
                     </div>
                 </div>
 
                 <div className="wizard-actions">
-                    <button className="wizard-btn-secondary" onClick={prevStep}>
+                    <Button variant="secondary" className="wizard-btn-secondary" onClick={prevStep}>
                         Indietro
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="primary"
                         className="wizard-btn-primary"
-                        style={{ flex: 2 }}
+                        style={{ flex: 2, justifyContent: 'center' }}
                         onClick={handleContinue}
-                        disabled={(data.usageGoals || []).length === 0 || isLoading}
+                        disabled={(data.usageGoals || []).length === 0}
+                        isLoading={isLoading}
                     >
-                        {isLoading ? 'Salvataggio...' : 'Continua'}
-                    </button>
+                        Continua
+                    </Button>
                 </div>
             </div>
             <style>{`
@@ -98,6 +98,7 @@ export const WizardStep5: React.FC = () => {
                    cursor: pointer;
                    transition: all 0.2s;
                    width: 100%;
+                   text-align: left;
                 }
                 .check-card:hover { border-color: var(--primary); }
                 .check-card.selected { border-color: var(--primary); background-color: var(--color-primary-50); }
@@ -105,14 +106,40 @@ export const WizardStep5: React.FC = () => {
                 .checkbox-circle {
                     width: 1.25rem;
                     height: 1.25rem;
+                    flex-shrink: 0;
                     border: 2px solid var(--muted-foreground);
-                    border-radius: 50%;
+                    border-radius: 4px; /* Square for checkbox */
                     transition: all 0.2s;
                 }
                 .checkbox-circle.checked {
                     border-color: var(--primary);
                     background-color: var(--primary);
                 }
+
+                .radio-circle {
+                    width: 1.25rem;
+                    height: 1.25rem;
+                    flex-shrink: 0;
+                    border: 2px solid var(--muted-foreground);
+                    border-radius: 50%; /* Round for radio */
+                    transition: all 0.2s;
+                    position: relative;
+                }
+                .radio-circle.checked {
+                    border-color: var(--primary);
+                }
+                .radio-circle.checked::after {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 0.625rem;
+                    height: 0.625rem;
+                    background-color: var(--primary);
+                    border-radius: 50%;
+                }
+
                 .option-text { font-weight: 500; color: var(--color-gray-900); }
             `}</style>
         </div>

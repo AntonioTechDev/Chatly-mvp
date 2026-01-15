@@ -37,7 +37,12 @@
       "Bash(git stash:*)",
       "Bash(git pull:*)",
       "Bash(grep:*)",
-      "Bash(npm audit:*)"
+      "Bash(npm audit:*)",
+      "Bash(claude mcp list-tools:*)",
+      "Bash(where:*)",
+      "Bash(dir:*)",
+      "Bash(supabase status:*)",
+      "Bash(echo:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

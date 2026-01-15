@@ -1,6 +1,6 @@
 import React from 'react'
+import { Button } from '@/components/ui/Button/Button'
 import { useWizard } from './WizardContext'
-import './Wizard.css'
 
 export const WizardStep6: React.FC = () => {
     const { nextStep, prevStep, data, updateData, isLoading } = useWizard()
@@ -42,33 +42,41 @@ export const WizardStep6: React.FC = () => {
                     <label className="form-label-auth">Numero di telefono</label>
                     <p className="step-description" style={{ marginBottom: '0.5rem' }}>Necessario per attivare l'account e le notifiche di sicurezza.</p>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <select className="form-input-auth" style={{ width: '6rem' }}>
+                        <select
+                            className="form-input-auth"
+                            style={{ width: '6rem' }}
+                            // Simple prefix handling - stored in component state or assumed part of flow?
+                            // For simplicity, we just assume +39 for now or let user type full.
+                            // Better: prepend +39 on save if missing.
+                            defaultValue="+39"
+                        >
                             <option value="+39">+39 🇮🇹</option>
-                            {/* Add more later */}
                         </select>
                         <input
                             type="tel"
                             className="form-input-auth"
                             placeholder="333 1234567"
-                            value={data.phoneNumber || ''}
-                            onChange={(e) => updateData({ phoneNumber: e.target.value })}
+                            value={data.phoneNumber?.replace('+39', '') || ''}
+                            onChange={(e) => updateData({ phoneNumber: '+39' + e.target.value })}
                             required
                         />
                     </div>
                 </div>
 
                 <div className="wizard-actions">
-                    <button className="wizard-btn-secondary" onClick={prevStep}>
+                    <Button variant="secondary" className="wizard-btn-secondary" onClick={prevStep}>
                         Indietro
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="primary"
                         className="wizard-btn-primary"
-                        style={{ flex: 2 }}
+                        style={{ flex: 2, justifyContent: 'center' }}
                         onClick={handleContinue}
-                        disabled={!data.role || !data.phoneNumber || isLoading}
+                        disabled={!data.role || !data.phoneNumber}
+                        isLoading={isLoading}
                     >
-                        {isLoading ? 'Invio codice...' : 'Continua'}
-                    </button>
+                        Continua
+                    </Button>
                 </div>
             </div>
         </div>

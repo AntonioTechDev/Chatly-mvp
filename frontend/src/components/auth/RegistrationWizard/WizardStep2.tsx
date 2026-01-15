@@ -1,32 +1,44 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import { Button } from '@/components/ui/Button/Button'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useWizard } from './WizardContext'
+import { authWizardService } from '@/core/services/authWizardService'
+import { supabase } from '@/core/lib/supabase'
 import toast from 'react-hot-toast'
-import './Wizard.css' // Import CSS
 
 export const WizardStep2: React.FC = () => {
-    const { nextStep, prevStep, data, isLoading } = useWizard()
-    const [code, setCode] = useState<string[]>(new Array(6).fill(''))
-    const [timeLeft, setTimeLeft] = useState(30) // 30 seconds countdown for resend
+    const { data, updateData } = useWizard()
+    const navigate = useNavigate()
+    const location = useLocation()
+    const emailFromStep1 = (location.state as any)?.email || data.email
+    const [code, setCode] = useState<string[]>(new Array(8).fill(''))
+    const [timeLeft, setTimeLeft] = useState(30)
     const [isVerifying, setIsVerifying] = useState(false)
+    const hasAutoSentRef = useRef(false)
+
+    // Auto-send OTP on mount (only once)
+    useEffect(() => {
+        if (hasAutoSentRef.current || !emailFromStep1) return
+
+        const autoSendOtp = async () => {
+            try {
+                hasAutoSentRef.current = true
+                await authWizardService.sendEmailOtp(emailFromStep1)
+                // Silent auto-send - don't toast to avoid distraction
+                setTimeLeft(30)
+            } catch (error: any) {
+                console.error('Auto-send OTP failed:', error)
+                // Don't toast on auto-send failure - let user click "Resend"
+            }
+        }
+
+        autoSendOtp()
+    }, [emailFromStep1])
 
     // Focus first input on mount
     useEffect(() => {
         const firstInput = document.getElementById('pin-0')
         if (firstInput) firstInput.focus()
-    }, [])
-
-    // Timer for code resend
-    // Timer for code resend
-    useEffect(() => {
-        // MOCK: Show code in toast for testing
-        // In production this would be handled by backend
-        const timer = setTimeout(() => {
-            toast('Il tuo codice di verifica è: 123456', {
-                icon: '📧',
-                duration: 6000
-            })
-        }, 1000)
-        return () => clearTimeout(timer)
     }, [])
 
     useEffect(() => {
@@ -44,7 +56,7 @@ export const WizardStep2: React.FC = () => {
         setCode(newCode)
 
         // Focus next input
-        if (element.value !== '' && index < 5) {
+        if (element.value !== '' && index < 7) {
             const nextInput = document.getElementById(`pin-${index + 1}`)
             if (nextInput) nextInput.focus()
         }
@@ -67,27 +79,49 @@ export const WizardStep2: React.FC = () => {
 
     const handleVerify = async () => {
         const pin = code.join('')
-        if (pin.length !== 6) return
-
-        // MOCK Validation
-        if (pin !== '123456') {
-            toast.error('Codice non valido')
-            return
-        }
+        if (pin.length !== 8) return
 
         setIsVerifying(true)
-        // Simulate API call
-        setTimeout(async () => {
+        try {
+            const result = await authWizardService.verifyEmailOtp(emailFromStep1, pin)
+
+            // Email verified successfully - DO NOT show long success toast
+            // Immediately redirect to Step 3
+            if (result.user) {
+                // Update wizard data with verified email
+                updateData({
+                    email: emailFromStep1,
+                    userId: result.user.id,
+                    emailVerified: true
+                })
+
+                // Silent redirect to Step 3
+                navigate('/onboarding/step-3', {
+                    replace: true,
+                    state: {
+                        userId: result.user.id,
+                        email: emailFromStep1
+                    }
+                })
+            }
+        } catch (error: any) {
+            console.error(error)
+            toast.error(error.message || 'Codice non valido')
+        } finally {
             setIsVerifying(false)
-            await nextStep()
-        }, 1500)
+        }
     }
 
-    const handleResend = () => {
+    const handleResend = async () => {
         if (timeLeft > 0) return
-        // Resend logic here
-        setTimeLeft(30)
-        // toast.success('Codice inviato!')
+        try {
+            await authWizardService.sendEmailOtp(emailFromStep1)
+            toast.success('Codice inviato! Controlla la tua email.')
+            setTimeLeft(30)
+        } catch (error: any) {
+            console.error(error)
+            toast.error(error.message || 'Errore durante l\'invio')
+        }
     }
 
     const isComplete = code.every(digit => digit !== '')
@@ -98,15 +132,19 @@ export const WizardStep2: React.FC = () => {
                 <span className="step-indicator">Passaggio 2 di 7</span>
                 <h2 className="step-title">Controlla la tua email</h2>
                 <p className="step-description">
-                    Abbiamo inviato un codice di conferma a <strong>{data.email}</strong>
+                    Abbiamo inviato un codice di conferma a <strong>{emailFromStep1}</strong>
                 </p>
-                <button className="register-link" style={{ fontSize: '0.875rem', marginTop: '0.5rem' }} onClick={prevStep}>
+                <button
+                    className="register-link"
+                    style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}
+                    onClick={() => navigate('/onboarding/step-1', { replace: true })}
+                >
                     Cambia email
                 </button>
             </div>
 
             <div className="wizard-form">
-                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'center', marginBottom: '1rem', flexWrap: 'nowrap' }}>
                     {code.map((digit, index) => (
                         <input
                             key={index}
@@ -115,10 +153,10 @@ export const WizardStep2: React.FC = () => {
                             maxLength={1}
                             className="form-input-auth"
                             style={{
-                                width: '3rem',
-                                height: '3rem',
+                                width: '2.5rem',
+                                height: '2.5rem',
                                 textAlign: 'center',
-                                fontSize: '1.5rem',
+                                fontSize: '1.25rem',
                                 padding: 0
                             }}
                             value={digit}
@@ -142,13 +180,16 @@ export const WizardStep2: React.FC = () => {
                     </p>
                 </div>
 
-                <button
+                <Button
+                    variant="primary"
                     className="wizard-btn-primary"
                     onClick={handleVerify}
-                    disabled={!isComplete || isVerifying || isLoading}
+                    disabled={!isComplete || isVerifying}
+                    isLoading={isVerifying}
+                    style={{ justifyContent: 'center' }}
                 >
-                    {isVerifying || isLoading ? 'Verifica in corso...' : 'Verifica email'}
-                </button>
+                    Verifica email
+                </Button>
             </div>
         </div>
     )

@@ -1,6 +1,6 @@
 import React from 'react'
+import { Button } from '@/components/ui/Button/Button'
 import { useWizard } from './WizardContext'
-import './Wizard.css'
 
 export const WizardStep4: React.FC = () => {
     const { nextStep, prevStep, data, updateData, isLoading } = useWizard()
@@ -64,17 +64,19 @@ export const WizardStep4: React.FC = () => {
                 </div>
 
                 <div className="wizard-actions">
-                    <button className="wizard-btn-secondary" onClick={prevStep}>
+                    <Button variant="secondary" className="wizard-btn-secondary" onClick={prevStep}>
                         Indietro
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="primary"
                         className="wizard-btn-primary"
-                        style={{ flex: 2 }}
+                        style={{ flex: 2, justifyContent: 'center' }}
                         onClick={handleContinue}
-                        disabled={!data.customerType || (data.acquisitionChannels || []).length === 0 || isLoading}
+                        disabled={!data.customerType || (data.acquisitionChannels || []).length === 0}
+                        isLoading={isLoading}
                     >
-                        {isLoading ? 'Salvataggio...' : 'Continua'}
-                    </button>
+                        Continua
+                    </Button>
                 </div>
             </div>
             {/* Inline styles for options - verify moves to CSS later */}

@@ -8,7 +8,6 @@ import { WizardStep5 } from './WizardStep5'
 import { WizardStep6 } from './WizardStep6'
 import { WizardStep7 } from './WizardStep7'
 import { AuthLayout } from '../AuthLayout'
-import './Wizard.css'
 
 export const WizardContainer: React.FC = () => {
     const { currentStep } = useWizard()
