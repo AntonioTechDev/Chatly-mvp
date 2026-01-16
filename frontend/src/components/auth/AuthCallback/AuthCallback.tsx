@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { supabase } from '@/core/lib/supabase'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
+// import { apiClient } from '@/api/api-client'
 
 /**
  * AuthCallback Component

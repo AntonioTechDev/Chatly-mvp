@@ -1,10 +1,12 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { authService } from '@/core/services/authService'
-import { AuthLayout } from '@/components/auth/AuthLayout'
+import { authService } from '@/services/authService'
+import { Card } from '@/components/ui/Card/Card'
 import { Button } from '@/components/ui/Button/Button'
+import { Input } from '@/components/ui/Input/Input'
+import { Toaster, toast } from 'react-hot-toast'
+import { AuthLayout } from '@/components/auth/AuthLayout'
 import { ArrowLeft } from 'lucide-react'
-import toast from 'react-hot-toast'
 import './LoginPage.css' // Reuse styles
 
 const ForgotPasswordPage: React.FC = () => {

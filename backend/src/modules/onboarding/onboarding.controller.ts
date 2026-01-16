@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Get, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Get, Request, UseGuards, Logger } from '@nestjs/common';
 import { OnboardingService } from './onboarding.service';
 import { SupabaseAuthGuard } from '../../common/guards/supabase-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
@@ -14,6 +14,8 @@ import { VerifyPhoneDto } from './dtos/verify-phone.dto';
 @Controller('onboarding')
 @UseGuards(SupabaseAuthGuard)
 export class OnboardingController {
+  private readonly logger = new Logger(OnboardingController.name);
+
   constructor(private readonly onboardingService: OnboardingService) { }
 
   /**
@@ -24,7 +26,15 @@ export class OnboardingController {
   @Post('step-1')
   @Public()
   async step1(@Body() dto: Step1Dto) {
-    return this.onboardingService.createUserAndSendOTP(dto);
+    this.logger.log(`[step-1] REQUEST received: ${JSON.stringify({ email: dto.email })}`);
+    try {
+      const result = await this.onboardingService.createUserAndSendOTP(dto);
+      this.logger.log(`[step-1] SUCCESS: ${JSON.stringify(result)}`);
+      return result;
+    } catch (error) {
+      this.logger.error(`[step-1] ERROR: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   /**
@@ -35,7 +45,15 @@ export class OnboardingController {
   @Post('step-2/verify-otp')
   @Public()
   async step2(@Body() dto: Step2Dto) {
-    return this.onboardingService.verifyOTPAndCreateProfile(dto);
+    this.logger.log(`[step-2/verify-otp] REQUEST received: ${JSON.stringify({ email: dto.email, codeLength: dto.otp?.length })}`);
+    try {
+      const result = await this.onboardingService.verifyOTPAndCreateProfile(dto);
+      this.logger.log(`[step-2/verify-otp] SUCCESS`);
+      return result;
+    } catch (error) {
+      this.logger.error(`[step-2/verify-otp] ERROR: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   /**
@@ -43,7 +61,15 @@ export class OnboardingController {
    */
   @Get('status')
   async getStatus(@Request() req: RequestWithUser) {
-    return this.onboardingService.getStatus(req.user.sub);
+    this.logger.log(`[status] REQUEST received: userId=${req.user.sub}`);
+    try {
+      const result = await this.onboardingService.getStatus(req.user.sub);
+      this.logger.log(`[status] SUCCESS: ${JSON.stringify({ currentStep: result.currentStep, status: result.onboardingStatus })}`);
+      return result;
+    } catch (error) {
+      this.logger.error(`[status] ERROR: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   /**
@@ -52,8 +78,16 @@ export class OnboardingController {
    */
   @Post('step-3')
   async step3(@Request() req: RequestWithUser, @Body() dto: Step3Dto) {
-    // Step 3 completed -> User is at Step 4
-    return this.onboardingService.saveStep(req.user.sub, { ...dto, currentStep: 4 });
+    this.logger.log(`[step-3] REQUEST received: userId=${req.user.sub}, data=${JSON.stringify(dto)}`);
+    try {
+      // Step 3 completed -> User is at Step 4
+      const result = await this.onboardingService.saveStep(req.user.sub, { ...dto, currentStep: 4 });
+      this.logger.log(`[step-3] SUCCESS: moved to step 4`);
+      return result;
+    } catch (error) {
+      this.logger.error(`[step-3] ERROR: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   /**
@@ -61,8 +95,16 @@ export class OnboardingController {
    */
   @Post('step-4')
   async step4(@Request() req: RequestWithUser, @Body() dto: Step4Dto) {
-    // Step 4 completed -> User is at Step 5
-    return this.onboardingService.saveStep(req.user.sub, { ...dto, currentStep: 5 });
+    this.logger.log(`[step-4] REQUEST received: userId=${req.user.sub}, data=${JSON.stringify(dto)}`);
+    try {
+      // Step 4 completed -> User is at Step 5
+      const result = await this.onboardingService.saveStep(req.user.sub, { ...dto, currentStep: 5 });
+      this.logger.log(`[step-4] SUCCESS: moved to step 5`);
+      return result;
+    } catch (error) {
+      this.logger.error(`[step-4] ERROR: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   /**
@@ -70,8 +112,16 @@ export class OnboardingController {
    */
   @Post('step-5')
   async step5(@Request() req: RequestWithUser, @Body() dto: Step5Dto) {
-    // Step 5 completed -> User is at Step 6
-    return this.onboardingService.saveStep(req.user.sub, { ...dto, currentStep: 6 });
+    this.logger.log(`[step-5] REQUEST received: userId=${req.user.sub}, data=${JSON.stringify(dto)}`);
+    try {
+      // Step 5 completed -> User is at Step 6
+      const result = await this.onboardingService.saveStep(req.user.sub, { ...dto, currentStep: 6 });
+      this.logger.log(`[step-5] SUCCESS: moved to step 6`);
+      return result;
+    } catch (error) {
+      this.logger.error(`[step-5] ERROR: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   /**
@@ -79,8 +129,16 @@ export class OnboardingController {
    */
   @Post('step-6')
   async step6(@Request() req: RequestWithUser, @Body() dto: Step6Dto) {
-    // Step 6 completed -> User is at Step 7
-    return this.onboardingService.saveStep(req.user.sub, { ...dto, currentStep: 7 });
+    this.logger.log(`[step-6] REQUEST received: userId=${req.user.sub}, data=${JSON.stringify(dto)}`);
+    try {
+      // Step 6 completed -> User is at Step 7
+      const result = await this.onboardingService.saveStep(req.user.sub, { ...dto, currentStep: 7 });
+      this.logger.log(`[step-6] SUCCESS: moved to step 7`);
+      return result;
+    } catch (error) {
+      this.logger.error(`[step-6] ERROR: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   /**
@@ -88,7 +146,15 @@ export class OnboardingController {
    */
   @Post('step-7/send-sms')
   async sendPhoneCode(@Request() req: RequestWithUser) {
-    return this.onboardingService.sendPhoneVerification(req.user.sub);
+    this.logger.log(`[step-7/send-sms] REQUEST received: userId=${req.user.sub}`);
+    try {
+      const result = await this.onboardingService.sendPhoneVerification(req.user.sub);
+      this.logger.log(`[step-7/send-sms] SUCCESS`);
+      return result;
+    } catch (error) {
+      this.logger.error(`[step-7/send-sms] ERROR: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   /**
@@ -96,7 +162,15 @@ export class OnboardingController {
    */
   @Post('step-7/verify-sms')
   async verifyPhoneCode(@Request() req: RequestWithUser, @Body() dto: VerifyPhoneDto) {
-    return this.onboardingService.verifyPhoneCode(req.user.sub, dto.code);
+    this.logger.log(`[step-7/verify-sms] REQUEST received: userId=${req.user.sub}, codeLength=${dto.code?.length}`);
+    try {
+      const result = await this.onboardingService.verifyPhoneCode(req.user.sub, dto.code);
+      this.logger.log(`[step-7/verify-sms] SUCCESS`);
+      return result;
+    } catch (error) {
+      this.logger.error(`[step-7/verify-sms] ERROR: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   /**
@@ -104,6 +178,14 @@ export class OnboardingController {
    */
   @Post('complete')
   async complete(@Request() req: RequestWithUser) {
-    return this.onboardingService.completeOnboarding(req.user.sub);
+    this.logger.log(`[complete] REQUEST received: userId=${req.user.sub}`);
+    try {
+      const result = await this.onboardingService.completeOnboarding(req.user.sub);
+      this.logger.log(`[complete] SUCCESS`);
+      return result;
+    } catch (error) {
+      this.logger.error(`[complete] ERROR: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 }

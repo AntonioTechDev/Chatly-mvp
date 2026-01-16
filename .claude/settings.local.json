@@ -42,7 +42,9 @@
       "Bash(where:*)",
       "Bash(dir:*)",
       "Bash(supabase status:*)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(npm run start:dev:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

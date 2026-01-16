@@ -1,15 +1,32 @@
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '@/core/contexts/AuthContext'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
+import { Card } from '@/components/ui/Card/Card'
+import { Button } from '@/components/ui/Button/Button'
+import { Input } from '@/components/ui/Input/Input'
+import { authService } from '@/services/authService'
 import { AuthLayout } from '@/components/auth/AuthLayout'
-import SpinnerIcon from '@/img/spinner.svg?react'
 import GoogleIcon from '@/img/google-icon.svg?react'
 import EyeIcon from '@/img/eye-icon.svg?react'
 import EyeOffIcon from '@/img/eye-off-icon.svg?react'
 
-import { authService } from '@/core/services/authService' // Fix: Missing import
-
 import './LoginPage.css'
+
+// Debug helpers
+const logDebug = (action: string, data?: any) => {
+  console.log(`[LoginPage] ${action}:`, {
+    timestamp: new Date().toISOString(),
+    ...data
+  })
+}
+
+const logError = (action: string, error: any) => {
+  console.error(`[LoginPage] ❌ ${action}:`, {
+    timestamp: new Date().toISOString(),
+    error: error?.message || error,
+    stack: error?.stack
+  })
+}
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('')
@@ -22,6 +39,8 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate()
 
   const validateForm = (): boolean => {
+    logDebug('VALIDATING form', { email, hasPassword: !!password })
+
     const newErrors: { email?: string; password?: string } = {}
 
     // Email validation
@@ -40,36 +59,50 @@ const LoginPage: React.FC = () => {
     }
 
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    const isValid = Object.keys(newErrors).length === 0
+
+    logDebug('VALIDATION result', {
+      isValid,
+      errors: newErrors
+    })
+
+    return isValid
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    logDebug('FORM SUBMITTED')
 
     if (!validateForm()) {
+      logDebug('FORM VALIDATION failed, aborting submit')
       return
     }
 
+    logDebug('FORM VALIDATION passed, starting login')
     setIsSubmitting(true)
 
     try {
+      logDebug('CALLING login function', { email })
       await login(email, password)
+
+      logDebug('LOGIN SUCCESS, navigating to dashboard')
       navigate('/dashboard')
     } catch (error) {
       // Error is handled in AuthContext
-      console.error('Login failed:', error)
+      logError('LOGIN FAILED', error)
     } finally {
       setIsSubmitting(false)
     }
   }
 
   const handleGoogleLogin = async () => {
+    logDebug('GOOGLE LOGIN clicked')
+
     try {
       await authService.signInWithGoogle()
+      logDebug('GOOGLE LOGIN initiated (redirect should occur)')
     } catch (error) {
-      console.error('Google login failed:', error)
-      // toast handled in service or here? service throws, so here.
-      // But authService.signInWithGoogle redirects, so normally we don't catch unless immediate error.
+      logError('GOOGLE LOGIN FAILED', error)
     }
   }
 

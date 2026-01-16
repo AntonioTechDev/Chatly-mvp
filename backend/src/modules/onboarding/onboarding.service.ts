@@ -4,6 +4,7 @@ import {
   NotFoundException,
   BadRequestException,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { SupabaseClient, createClient } from '@supabase/supabase-js';
 import { ConfigService } from '@nestjs/config';
@@ -14,6 +15,7 @@ import { Step2Dto } from './dtos/step2.dto';
 
 @Injectable()
 export class OnboardingService {
+  private readonly logger = new Logger(OnboardingService.name);
   private supabase: SupabaseClient;
 
   constructor(
@@ -36,8 +38,12 @@ export class OnboardingService {
    * @returns User ID and confirmation message
    */
   async createUserAndSendOTP(dto: Step1Dto) {
+    this.logger.log(`[createUserAndSendOTP] STARTED for email: ${dto.email}`);
+
     try {
       // 1. Create Supabase auth user
+      this.logger.log(`[createUserAndSendOTP] Calling Supabase signUp`);
+
       const { data, error } = await this.supabase.auth.signUp({
         email: dto.email,
         password: dto.password,
@@ -48,29 +54,33 @@ export class OnboardingService {
       });
 
       if (error) {
-        console.error('Auth signUp error:', error);
+        this.logger.error(`[createUserAndSendOTP] Supabase signUp ERROR: ${error.message}`, error.stack);
         throw new BadRequestException(
           error.message || 'Failed to create user account'
         );
       }
 
       if (!data.user) {
+        this.logger.error(`[createUserAndSendOTP] NO USER returned from signUp`);
         throw new BadRequestException('User creation failed - no user returned');
       }
 
-      console.log(`User created: ${data.user.id} (${dto.email})`);
+      this.logger.log(`[createUserAndSendOTP] User created: ${data.user.id} (${dto.email})`);
 
       // 2. OTP is sent automatically by Supabase
       // User will receive email with OTP code
-      return {
+      const result = {
         success: true,
         message: 'Account created. Check your email for the OTP code.',
         userId: data.user.id,
         email: data.user.email,
         needsOtpVerification: true,
       };
+
+      this.logger.log(`[createUserAndSendOTP] SUCCESS - returning result`);
+      return result;
     } catch (error) {
-      console.error('createUserAndSendOTP error:', error);
+      this.logger.error(`[createUserAndSendOTP] EXCEPTION: ${error.message}`, error.stack);
       throw error;
     }
   }
@@ -86,8 +96,12 @@ export class OnboardingService {
    * @returns Session tokens and user profile data
    */
   async verifyOTPAndCreateProfile(dto: Step2Dto) {
+    this.logger.log(`[verifyOTPAndCreateProfile] STARTED for email: ${dto.email}`);
+
     try {
       // 1. Verify OTP token with Supabase
+      this.logger.log(`[verifyOTPAndCreateProfile] Calling Supabase verifyOtp`);
+
       const { data, error } = await this.supabase.auth.verifyOtp({
         email: dto.email,
         token: dto.otp,
@@ -95,20 +109,23 @@ export class OnboardingService {
       });
 
       if (error) {
-        console.error('OTP verification error:', error);
+        this.logger.error(`[verifyOTPAndCreateProfile] OTP verification ERROR: ${error.message}`, error.stack);
         throw new UnauthorizedException(
           'Invalid or expired OTP code. Please try again.'
         );
       }
 
       if (!data.user || !data.session) {
+        this.logger.error(`[verifyOTPAndCreateProfile] NO USER or SESSION returned`);
         throw new UnauthorizedException('OTP verification failed');
       }
 
       const userId = data.user.id;
-      console.log(`OTP verified for user: ${userId}`);
+      this.logger.log(`[verifyOTPAndCreateProfile] OTP verified for user: ${userId}`);
 
       // 2. Check if profile exists, create if needed
+      this.logger.log(`[verifyOTPAndCreateProfile] Checking for existing profile`);
+
       const { data: existingProfile, error: profileError } = await this.supabase
         .from('profiles')
         .select('*')
@@ -119,7 +136,8 @@ export class OnboardingService {
 
       if (profileError || !existingProfile) {
         // Profile doesn't exist - create it
-        console.log(`Creating profile for user ${userId}`);
+        this.logger.log(`[verifyOTPAndCreateProfile] Profile NOT FOUND, creating new profile for user ${userId}`);
+
         const { data: newProfile, error: createError } = await this.supabase
           .from('profiles')
           .insert({
@@ -133,24 +151,29 @@ export class OnboardingService {
           .single();
 
         if (createError) {
-          console.error('Profile creation error:', createError);
+          this.logger.error(`[verifyOTPAndCreateProfile] Profile creation ERROR: ${createError.message}`, createError);
           // Don't fail here - profile might have been created by trigger
           // Try to fetch it again
+          this.logger.log(`[verifyOTPAndCreateProfile] Attempting to fetch profile again after creation error`);
           const { data: fetchedProfile } = await this.supabase
             .from('profiles')
             .select('*')
             .eq('id', userId)
             .single();
           profile = fetchedProfile;
+          this.logger.log(`[verifyOTPAndCreateProfile] Fetched profile: ${fetchedProfile ? 'SUCCESS' : 'FAILED'}`);
         } else {
           profile = newProfile;
+          this.logger.log(`[verifyOTPAndCreateProfile] Profile created successfully`);
         }
+      } else {
+        this.logger.log(`[verifyOTPAndCreateProfile] Existing profile found`);
       }
 
-      console.log(`Profile ready for user ${userId}`);
+      this.logger.log(`[verifyOTPAndCreateProfile] Profile ready for user ${userId}`);
 
       // 3. Return session tokens and user data for Step 3+
-      return {
+      const result = {
         success: true,
         message: 'Email verified successfully',
         userId: data.user.id,
@@ -160,8 +183,11 @@ export class OnboardingService {
         profile: profile,
         readyForStep3: true,
       };
+
+      this.logger.log(`[verifyOTPAndCreateProfile] SUCCESS - returning result with tokens`);
+      return result;
     } catch (error) {
-      console.error('verifyOTPAndCreateProfile error:', error);
+      this.logger.error(`[verifyOTPAndCreateProfile] EXCEPTION: ${error.message}`, error.stack);
       throw error;
     }
   }
@@ -171,18 +197,22 @@ export class OnboardingService {
    * PROTECTED - requires authentication
    */
   async getStatus(userId: string) {
-    const { data: profile, error: profileError } = await this.supabase
+    this.logger.log(`[getStatus] STARTED for userId: ${userId}`);
+
+    const { data: profile, error: profileError} = await this.supabase
       .from('profiles')
       .select('*, platform_clients(*)')
       .eq('id', userId)
       .single();
 
     if (profileError) {
-      console.error('getStatus Error:', profileError);
+      this.logger.error(`[getStatus] Profile query ERROR: ${profileError.message}`, profileError);
       // If profile not found, return rudimentary status or error
       // Assuming profile MUST exist for auth user
       throw new NotFoundException(`Profile not found: ${profileError.message}`);
     }
+
+    this.logger.log(`[getStatus] Profile found, hasClient: ${!!profile.platform_clients}`);
 
     const client = profile.platform_clients;
 
@@ -216,8 +246,12 @@ export class OnboardingService {
    * PROTECTED - requires authentication
    */
   async saveStep(userId: string, data: any) {
+    this.logger.log(`[saveStep] STARTED for userId: ${userId}, data: ${JSON.stringify(data)}`);
+
     // 1. Ensure Profile & Platform Client Link
+    this.logger.log(`[saveStep] Ensuring platform client exists`);
     const clientId = await this.ensurePlatformClient(userId, data);
+    this.logger.log(`[saveStep] Platform client ID: ${clientId}`);
 
     // 2. Prepare Updates
     const dbUpdate: Record<string, any> = {};
@@ -252,21 +286,32 @@ export class OnboardingService {
     if (data.role) profileUpdate['role'] = data.role;
     if (data.phone) profileUpdate['phone_number'] = data.phone; // Assuming phone collected in step 7
 
+    this.logger.log(`[saveStep] Prepared updates - dbUpdate keys: ${Object.keys(dbUpdate)}, profileUpdate keys: ${Object.keys(profileUpdate)}`);
+
     // 3. Execute Updates
     if (Object.keys(dbUpdate).length > 0) {
+      this.logger.log(`[saveStep] Updating platform_clients table`);
       const { error } = await this.supabase
         .from('platform_clients')
         .update(dbUpdate)
         .eq('id', clientId);
 
-      if (error) throw new InternalServerErrorException(`Failed to update client: ${error.message}`);
+      if (error) {
+        this.logger.error(`[saveStep] Platform client update ERROR: ${error.message}`, error);
+        throw new InternalServerErrorException(`Failed to update client: ${error.message}`);
+      }
+      this.logger.log(`[saveStep] Platform client updated successfully`);
     }
 
     if (Object.keys(profileUpdate).length > 0) {
+      this.logger.log(`[saveStep] Updating profiles table`);
       await this.supabase.from('profiles').update(profileUpdate).eq('id', userId);
+      this.logger.log(`[saveStep] Profile updated successfully`);
     }
 
-    return { success: true, step: data.currentStep };
+    const result = { success: true, step: data.currentStep };
+    this.logger.log(`[saveStep] SUCCESS - returning result`);
+    return result;
   }
 
   /**
@@ -274,7 +319,10 @@ export class OnboardingService {
    * Returns the platform_client_id.
    */
   private async ensurePlatformClient(userId: string, contextData: any): Promise<number> {
+    this.logger.log(`[ensurePlatformClient] STARTED for userId: ${userId}`);
+
     // 1. Get Profile
+    this.logger.log(`[ensurePlatformClient] Fetching profile`);
     const { data: profile } = await this.supabase
       .from('profiles')
       .select('platform_client_id, email') // Assuming email might be in profiles if synced, OR we get it from auth.users (not accessible easily here without admin call or passing it)
@@ -283,13 +331,18 @@ export class OnboardingService {
       .single();
 
     if (profile?.platform_client_id) {
+      this.logger.log(`[ensurePlatformClient] Existing client found: ${profile.platform_client_id}`);
       return profile.platform_client_id;
     }
+
+    this.logger.log(`[ensurePlatformClient] No existing client, creating new one`);
 
     // 2. Create new Platform Client
     // We need an email for the business. Use user's email if available, or placeholder.
     const email = contextData.email || `${userId}@placeholder.chatly`;
     // Note: For Step 1, we expect email in data.
+
+    this.logger.log(`[ensurePlatformClient] Creating platform_client with email: ${email}`);
 
     const { data: newClient, error: createError } = await this.supabase
       .from('platform_clients')
@@ -303,18 +356,22 @@ export class OnboardingService {
       .single();
 
     if (createError) {
-      console.error('ensurePlatformClient Error:', createError);
+      this.logger.error(`[ensurePlatformClient] Platform client creation ERROR: ${createError.message}`, createError);
       // Handle unique constraint: maybe client exists by email?
       // Logic to attach existing client could go here ("Invite flow").
       throw new InternalServerErrorException(`Failed to create tenant: ${createError.message}`);
     }
 
+    this.logger.log(`[ensurePlatformClient] Platform client created with ID: ${newClient.id}`);
+
     // 3. Link to Profile
+    this.logger.log(`[ensurePlatformClient] Linking client to profile`);
     await this.supabase
       .from('profiles')
       .update({ platform_client_id: newClient.id })
       .eq('id', userId);
 
+    this.logger.log(`[ensurePlatformClient] SUCCESS - returning clientId: ${newClient.id}`);
     return newClient.id;
   }
 
